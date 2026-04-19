@@ -32,7 +32,6 @@
   --glow-silver: rgba(184,208,240,.28);
   --font-main: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
 }
-}
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -67,6 +66,7 @@ body::before {
   font-family: var(--font-main) !important;
   font-weight: 800; /* 너무 두껍지 않게 조절 */
   letter-spacing: -0.5px;
+}
 .title-sub {
   font-family: 'Orbitron', sans-serif;
   font-size: .7rem; font-weight: 700; letter-spacing: 6px;
@@ -1161,15 +1161,14 @@ function renderVictory(){
      ════════════════════════════════════════ -->
 <script>
 function startGame(){
-  BGM.play(); // 게임 시작 클릭 시 음악 강제 재생 시작
-  G.deck=buildStarterDeck();
-  // ... 나머지 기존 코드 ...
-
-  G.deck=buildStarterDeck();
-  rewardPickIdx=null; restChoice=null; restUpgradeIdx=null;
-  G.log=[];
-  initStage(0,null);
- G.screen='boss_intro';
+  BGM.play(); 
+  G.deck = buildStarterDeck();
+  rewardPickIdx = null; 
+  restChoice = null; 
+  restUpgradeIdx = null;
+  G.log = [];
+  initStage(0, null);
+  G.screen = 'boss_intro';
   render();
 }
 window.onload=()=>render();
