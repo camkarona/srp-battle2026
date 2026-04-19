@@ -333,7 +333,35 @@ background-size: contain;      /* cover 대신 contain으로 변경 */
   font-family:'Black Han Sans', sans-serif; font-size:1.15rem; color:var(--accent2);
   line-height:1.6; margin-bottom:25px; min-height:60px; word-break:keep-all;
 }
-  
+  /* ═══ BATTLE CLASH SYSTEM (추가) ═══ */
+#clash-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 1000; pointer-events: none;
+}
+#clash-overlay.active { display: flex; pointer-events: auto; }
+
+.clash-stage { display: flex; align-items: center; gap: 40px; position: relative; }
+.clash-card {
+  width: 140px; height: 200px; background: var(--bg2);
+  border: 3px solid var(--border); border-radius: 15px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* 카드 등장 애니메이션 */
+.player-clash-card { transform: translateX(-150%) scale(0.5); opacity: 0; }
+.enemy-clash-card { transform: translateX(150%) scale(0.5); opacity: 0; }
+
+.active .player-clash-card { transform: translateX(0) scale(1.2); opacity: 1; }
+.active .enemy-clash-card { transform: translateX(0) scale(1.2); opacity: 1; }
+
+/* 승리/패배 효과 */
+.clash-card.winner { border-color: var(--win); box-shadow: 0 0 30px var(--win); transform: scale(1.3); }
+.clash-card.loser { opacity: 0; transform: scale(0.8) translateY(50px); filter: grayscale(1); }
+.clash-card.draw-card { border-color: var(--draw); transform: scale(1.1); }
+
+.clash-vs { font-family: 'Orbitron', sans-serif; font-size: 2rem; color: var(--accent); font-weight: 900; }
 </style>
 </head>
 <body>
@@ -344,7 +372,16 @@ background-size: contain;      /* cover 대신 contain으로 변경 */
      자동으로 루프 재생됩니다. 파일이 없으면 조용히 무시됩니다.
      ════════════════════════════════════════ -->
 <audio id="bgm-track" src="backgroundmusic.mp3" loop preload="none"></audio>
-
+  
+<div id="clash-overlay">
+  <div class="clash-stage">
+    <div id="p-clash" class="clash-card player-clash-card"></div>
+    <div class="clash-vs">VS</div>
+    <div id="e-clash" class="clash-card enemy-clash-card"></div>
+  </div>
+  <div id="clash-result-text" style="margin-top:40px; font-family:'Black Han Sans'; font-size:1.5rem;"></div>
+</div>
+  
 <script>
 /* BGM 컨트롤 래퍼 */
 const BGM = {
@@ -601,43 +638,66 @@ function initStage(idx, hpOverride=null){
 }
 
 /* ── 카드 내기 ── */
-function playCard(handIdx){
+async function playCard(handIdx) {
   if(!G.handDealt || G.dealAnimating) return;
   if(G.usedInHand.includes(handIdx)) return;
 
-  SFX.play();
-  const pCard=G.hand[handIdx];
-  const eCard=cpuPickCard();
-  const result=judge(pCard.type, eCard.type);
-  const stage=STAGES[G.stageIdx];
+  const pCard = G.hand[handIdx];
+  const eCard = cpuPickCard();
+  const res = judge(pCard.type, eCard.type);
+  const overlay = $('clash-overlay');
 
-  if(result==='win'){
-    const dmg=TIER[pCard.tier].dmg;
-    G.enemyHp=Math.max(0,G.enemyHp-dmg);
-    addLog(`나의 ${CARD_TYPES[pCard.type].name}(${TIER[pCard.tier].label}) vs 적의 ${CARD_TYPES[eCard.type].name}(${TIER[eCard.tier].label}) → 🏆 승리! ${dmg} 데미지!`,'win');
-    setTimeout(()=>SFX.win(),150);
-  } else if(result==='lose'){
-    G.playerHp=Math.max(0,G.playerHp-stage.enemyAtk);
-    addLog(`나의 ${CARD_TYPES[pCard.type].name}(${TIER[pCard.tier].label}) vs 적의 ${CARD_TYPES[eCard.type].name}(${TIER[eCard.tier].label}) → 💀 패배! ${stage.enemyAtk} 데미지!`,'lose');
-    setTimeout(()=>SFX.lose(),150);
+  // 1. 연출 시작: 오버레이에 정보 세팅
+  $('p-clash').innerHTML = `<div class="card-icon" style="font-size:3rem">${CARD_TYPES[pCard.type].icon}</div><div class="card-dmg" style="font-size:1.5rem">${TIER[pCard.tier].dmg}</div>`;
+  $('p-clash').className = `clash-card player-clash-card ${pCard.tier} ${pCard.type}`;
+  
+  $('e-clash').innerHTML = `<div class="card-icon" style="font-size:3rem">${CARD_TYPES[eCard.type].icon}</div><div class="card-dmg" style="font-size:1.5rem">${TIER[eCard.tier].dmg}</div>`;
+  $('e-clash').className = `clash-card enemy-clash-card ${eCard.tier} ${eCard.type}`;
+  
+  $('clash-result-text').textContent = "격돌 중...";
+  overlay.classList.add('active');
+  SFX.play();
+
+  // 2. 약간의 대기 후 결과 연출 (0.8초)
+  await new Promise(r => setTimeout(r, 800));
+
+  if (res === 'win') {
+    $('p-clash').classList.add('winner');
+    $('e-clash').classList.add('loser');
+    $('clash-result-text').textContent = "WIN! 타격 성공!";
+    $('clash-result-text').style.color = "var(--win)";
+    SFX.win();
+  } else if (res === 'lose') {
+    $('p-clash').classList.add('loser');
+    $('e-clash').classList.add('winner');
+    $('clash-result-text').textContent = "LOSE! 데미지 입음!";
+    $('clash-result-text').style.color = "var(--lose)";
+    SFX.lose();
   } else {
-    addLog(`나의 ${CARD_TYPES[pCard.type].name}(${TIER[pCard.tier].label}) vs 적의 ${CARD_TYPES[eCard.type].name}(${TIER[eCard.tier].label}) → 🤝 무승부`,'draw');
-    setTimeout(()=>SFX.drawSfx(),150);
+    $('p-clash').classList.add('draw-card');
+    $('e-clash').classList.add('draw-card');
+    $('clash-result-text').textContent = "DRAW! 무승부";
+    $('clash-result-text').style.color = "var(--draw)";
+    SFX.drawSfx();
   }
 
-  /* ── 낸 카드 인덱스 기록 후 render → used-card 클래스로 카드 숨김 ── */
-  G.usedInHand.push(handIdx);
+  // 3. 연출 종료 및 실제 데이터 반영 (1.2초 후)
+  await new Promise(r => setTimeout(r, 1200));
+  overlay.classList.remove('active');
 
+  // 기존 클로드 로직 실행 (HP 반영 및 로그 기록)
+  const stage = STAGES[G.stageIdx];
+  if(res==='win'){ G.enemyHp = Math.max(0, G.enemyHp - TIER[pCard.tier].dmg); addLog(`승리! ${TIER[pCard.tier].dmg} 데미지!`,'win'); }
+  else if(res==='lose'){ G.playerHp = Math.max(0, G.playerHp - stage.enemyAtk); addLog(`패배! ${stage.enemyAtk} 데미지!`,'lose'); }
+  else { addLog(`무승부`,'draw'); }
+
+  G.usedInHand.push(handIdx);
   if(G.enemyHp<=0){ render(); setTimeout(triggerStageClear,500); return; }
   if(G.playerHp<=0){ render(); setTimeout(triggerGameOver,500); return; }
-
-  if(G.usedInHand.length===3){
-    /* 손패 3장 모두 사용 → 다음 턴 준비 */
-    G.handDealt=false;
-    addLog('── 손패를 모두 사용했습니다. [카드 받기]를 눌러 다음 턴!','info');
-  }
-
-  render(); // ← 반드시 render() 한 번만 호출
+  if(G.usedInHand.length===3) G.handDealt=false;
+  
+  render();
+} // ← 반드시 render() 한 번만 호출
 }
 
 function addLog(msg,type=''){
