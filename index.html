@@ -850,9 +850,6 @@ function renderBattle(){
 
   const pInfo = PERSONALITIES.find(p => p.key === G.cpuPersonality);
 
-  const pTrackW = G.playerMaxHp * 15 + "px";
-  const eTrackW = G.enemyMaxHp * 15 + "px";
-
   /* 플레이어/적 카드 추적(pip) 로직 (기존 유지) */
   const drawIds = new Set(G.drawPile.map(c => c.id));
   const handIds = new Set(G.hand.map(c => c.id));
