@@ -246,11 +246,11 @@ body::before {
 .card.tier-silver { border-color:var(--silver); box-shadow:0 0 10px var(--glow-silver); }
 .card.tier-gold   { border-color:var(--gold);   box-shadow:0 0 14px var(--glow-gold); }
 .card.tier-gold::after {
-  content:'GOLD'; position:absolute; top:5px; right:6px;
+  content:'골드'; position:absolute; top:5px; right:6px;
   font-size:.44rem; letter-spacing:1.5px; color:var(--gold); font-family:'Orbitron',sans-serif;
 }
 .card.tier-silver::after {
-  content:'SILVER'; position:absolute; top:5px; right:6px;
+  content:'실'; position:absolute; top:5px; right:6px;
   font-size:.44rem; letter-spacing:1.5px; color:var(--silver); font-family:'Orbitron',sans-serif;
 }
 
@@ -497,9 +497,9 @@ const CARD_TYPES = {
   paper:    { icon:'🖐️', name:'보',  label:'PAPER',    beats:'rock'     }
 };
 const TIER = {
-  normal: { label:'NRM', dmg:3, color:'var(--normal-c)' },
-  silver: { label:'SLV', dmg:5, color:'var(--silver)'   },
-  gold:   { label:'GLD', dmg:7, color:'var(--gold)'     }
+  normal: { label:'노멀', dmg:3, color:'var(--normal-c)' },
+  silver: { label:'실버', dmg:5, color:'var(--silver)'   },
+  gold:   { label:'골드', dmg:7, color:'var(--gold)'     }
 };
 // 보스별 이미지와 대사 데이터
 const BOSS_INTRO_DATA = [
@@ -840,6 +840,13 @@ function renderTitle(){
 function renderBattle(){
   const stage = STAGES[G.stageIdx];
   const bossData = BOSS_INTRO_DATA[G.stageIdx];
+  /* 플레이어의 현재 체력이 최대치보다 높으면, 현재 체력을 기준으로 바 너비 계산 */
+  const pDisplayMax = Math.max(G.playerMaxHp, G.playerHp);
+  const pPct = Math.max(0, (G.playerHp / pDisplayMax) * 100);
+  const pTrackW = pDisplayMax * 15 + "px"; // 체력이 많아질수록 바가 오른쪽으로 길어집니다.
+
+  const ePct = Math.max(0, (G.enemyHp / G.enemyMaxHp) * 100);
+  const eTrackW = G.enemyMaxHp * 15 + "px";
   
   const pPct = Math.max(0, (G.playerHp / G.playerMaxHp) * 100);
   const ePct = Math.max(0, (G.enemyHp / G.enemyMaxHp) * 100);
@@ -1039,9 +1046,9 @@ function renderReward(){
       </div>
       <div style="font-size:.78rem;color:var(--text-dim);line-height:1.7;margin-bottom:14px">
         카드 1장을 한 단계 강화하세요!<br>
-        <span style="color:var(--normal-c)">NRM(3)</span> →
-        <span style="color:var(--silver)">SLV(5)</span> →
-        <span style="color:var(--gold)">GLD(7)</span>
+        <span style="color:var(--normal-c)">노멀(3)</span> →
+        <span style="color:var(--silver)">실버(5)</span> →
+        <span style="color:var(--gold)">골(7)</span>
         ${allMax?'<br>모든 카드가 최대입니다.':''}
       </div>
       ${allMax?'':`<div class="upgrade-pick">${cards}</div>`}
@@ -1066,7 +1073,7 @@ function confirmReward(){
 let restChoice=null, restUpgradeIdx=null;
 function renderRestStop(){
   const bSel=restChoice==='bakkus', uSel=restChoice==='upgrade';
-  const newHp=Math.min(G.playerMaxHp,G.playerHp+3);
+  const newHp=const newHp = G.playerHp + 3;
   const upSub=uSel?`
     <div style="font-size:.72rem;color:var(--text-dim);margin:10px 0 4px;text-align:center">강화할 카드를 선택하세요:</div>
     <div class="upgrade-pick">
@@ -1104,7 +1111,7 @@ function renderRestStop(){
              onclick="restChoice='upgrade';restUpgradeIdx=null;renderRestStop()">
           <div class="opt-icon">⚡</div>
           <div class="opt-name" style="color:var(--silver)">카드 강화</div>
-          <div class="opt-desc">내 덱 카드 1장을<br>한 단계 강화합니다<br><b style="color:var(--gold)">최대 GOLD(7DMG)</b></div>
+          <div class="opt-desc">내 덱 카드 1장을<br>한 단계 강화합니다<br><b style="color:var(--gold)">최대 골(7DMG)</b></div>
         </div>
       </div>
       ${upSub}
@@ -1116,7 +1123,7 @@ function renderRestStop(){
     </div>`;
 }
 function confirmRestStop(){
-  if(restChoice==='bakkus'){ G.playerHp=Math.min(G.playerMaxHp,G.playerHp+3); SFX.heal(); }
+  if(restChoice==='bakkus'){ G.playerHp += 3; SFX.heal(); }
   else if(restChoice==='upgrade'&&restUpgradeIdx!==null){
     const c=G.deck[restUpgradeIdx];
     G.deck[restUpgradeIdx]=makeCard(c.type,c.tier==='normal'?'silver':'gold');
