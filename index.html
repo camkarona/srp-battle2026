@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>가위 바위 보 배틀 — S-R-P Battle v1.5</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@300;400;700&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@600;700&display=swap');
-
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+  
 :root {
   --bg:          #090b12;
   --bg2:         #0f1220;
@@ -30,11 +30,14 @@
   --enemy:       #ff6b8a;
   --glow-gold:   rgba(255,208,96,.4);
   --glow-silver: rgba(184,208,240,.28);
+  --font-main: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+}
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
+  font-family: var(--font-main);
   background: var(--bg);
   color: var(--text);
   font-family: 'Noto Sans KR', sans-serif;
@@ -60,12 +63,10 @@ body::before {
 
 /* ═══ TITLE BAR ═══ */
 #title-bar { text-align: center; padding: 12px 0 2px; }
-.title-main {
-  font-family: 'Black Han Sans', sans-serif;
-  font-size: 1.55rem; color: var(--accent);
-  text-shadow: 0 0 28px rgba(232,200,74,.55);
-  letter-spacing: 3px;
-}
+.title-main, .hero-ko, .boss-dialogue, .opt-name, .rest-title {
+  font-family: var(--font-main) !important;
+  font-weight: 800; /* 너무 두껍지 않게 조절 */
+  letter-spacing: -0.5px;
 .title-sub {
   font-family: 'Orbitron', sans-serif;
   font-size: .7rem; font-weight: 700; letter-spacing: 6px;
@@ -366,6 +367,8 @@ background-size: contain;      /* cover 대신 contain으로 변경 */
 }
 @keyframes bossPop { from{opacity:0; transform:scale(.7) rotate(-5deg)} to{opacity:1; transform:scale(1) rotate(0deg)} }
 .boss-dialogue {
+  font-weight: 500;
+  font-size: 1.1rem;
   font-family:'Black Han Sans', sans-serif; font-size:1.15rem; color:var(--accent2);
   line-height:1.6; margin-bottom:25px; min-height:60px; word-break:keep-all;
 }
@@ -519,19 +522,19 @@ function renderBossIntro() {
 }
 const STAGES = [
   {
-    id:1, name:'STAGE 1', label:'STAGE 1 — 街頭',
+    id:1, name:'STAGE 1', label:'STAGE 1 ',
     enemyName:'양아치', enemyIcon:'😤',
     playerHp:10, enemyHp:5, enemyAtk:3,
     enemyDeckBuild:()=>buildEnemyDeck('normal','normal','normal','normal','normal','normal')
   },
   {
-    id:2, name:'STAGE 2', label:'STAGE 2 — 決鬪',
+    id:2, name:'STAGE 2', label:'STAGE 2 ',
     enemyName:'두목', enemyIcon:'😎',
     playerHp:10, enemyHp:7, enemyAtk:4,
     enemyDeckBuild:()=>buildEnemyDeck('normal','normal','normal','normal','normal','silver')
   },
   {
-    id:3, name:'STAGE 3', label:'STAGE 3 — 最終',
+    id:3, name:'STAGE 3', label:'STAGE 3 ',
     enemyName:'문동진', enemyIcon:'👹',
     playerHp:10, enemyHp:12, enemyAtk:5,
     enemyDeckBuild:()=>buildEnemyDeck('normal','normal','silver','silver','gold','gold')
@@ -779,13 +782,14 @@ function enemyRemaining(){
 <script>
 const $=id=>document.getElementById(id);
 
+/* 상단 바 수정 (by Karona 추가) */
 function titleBarHTML(sub=''){
-  return `<div id="title-bar">
-    <div class="title-main">가위 바위 보 배틀</div>
-    <div class="title-sub">S-R-P &nbsp; BATTLE</div>
-    <div class="title-ver">v1.5</div>
-    ${sub?`<div id="stage-label">${sub}</div>`:''}
-  </div>`;
+  return `
+    <div id="title-bar">
+      <div class="title-main">가위 바위 보 배틀</div>
+      <div class="title-sub">S-R-P BATTLE <span style="font-size:0.5rem; letter-spacing:1px; opacity:0.6;">by Karona</span></div>
+      ${sub ? `<div id="stage-label">${sub}</div>` : ''}
+    </div>`;
 }
 
 function render(){
@@ -801,35 +805,36 @@ function render(){
 }
 
 /* ① TITLE — 디자인 및 제작자 정보 수정 버전 */
+/* ① TITLE — 최종 디자인 */
 function renderTitle(){
   $('app').innerHTML = `
     <div id="title-screen">
-      <div class="hero-ko">가위 바위 보 배틀</div>
-      <div class="hero-en">S-R-P &nbsp; BATTLE</div>
-      <div class="hero-ver">v1.5</div>
+      <div class="hero-ko" style="font-weight:900; letter-spacing:2px;">가위 바위 보 배틀</div>
+      <div class="hero-en" style="opacity:0.8;">S-R-P &nbsp; BATTLE</div>
+      <div class="hero-ver">v2.5</div>
       
       <div class="rps-deco">
         <span>✌️</span><span>✊</span><span>🖐️</span>
       </div>
 
-      <div style="margin-bottom: 40px;">
-        <button class="btn btn-primary" onclick="startGame()">⚔️ 게임 시작</button>
+      <div style="margin: 40px 0;">
+        <button class="btn btn-primary" onclick="startGame()" style="padding: 15px 40px; font-size: 1rem;">⚔️ 게임 시작</button>
       </div>
 
       <div style="margin-top:50px; line-height:1.8; letter-spacing:1px; font-family:'Orbitron', sans-serif;">
         <div style="font-size:.75rem; color:var(--accent2); font-weight:700; margin-bottom:4px;">
           Developed by Karona (=정인휴)
         </div>
-        <div style="font-size:.65rem; color:var(--text); opacity:0.9;">
+        <div style="font-size:.65rem; color:var(--text); opacity:0.8;">
           April 2026
         </div>
-        <div style="font-size:.65rem; color:var(--text-dim); opacity:0.7;">
+        <div style="font-size:.65rem; color:var(--text-dim); opacity:0.6;">
           in Phnom Penh, Cambodia
         </div>
       </div>
-      
     </div>`;
 }
+  
 /* ② BATTLE — render는 G 상태만 읽어서 그린다 */
 /* ② BATTLE — 상세 로그 및 접기 기능 적용 버전 */
 function renderBattle(){
