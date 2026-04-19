@@ -90,13 +90,49 @@ body::before {
 
 /* ═══ HP ═══ */
 #hp-area { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-.hp-block { display:flex; flex-direction:column; gap:4px; }
-.hp-label { font-size:.62rem; letter-spacing:2px; color:var(--text-dim); display:flex; justify-content:space-between; }
-.hp-label span:last-child { color:var(--text); font-weight:700; }
-.hp-track { height:10px; background:rgba(255,255,255,.05); border-radius:6px; overflow:hidden; }
-.hp-fill  { height:100%; border-radius:6px; transition:width .55s cubic-bezier(.4,0,.2,1); }
-#player-hp-fill { background:linear-gradient(90deg,#4af0c8,#38c8a0); }
-#enemy-hp-fill  { background:linear-gradient(90deg,#f04a6a,#c02848); }
+/* HP 블록: 적 이미지가 배경에 깔리도록 설정 */
+.hp-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative; /* 레이어 기준점 */
+  overflow: hidden;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+/* 적 에셋이 들어갈 투명 배경 레이어 */
+.enemy-bg-sprite {
+  position: absolute;
+  top: 0; right: 0;
+  width: 100px; height: 100px;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.15; /* 글씨 방해 안 되게 더 은은하게 조절 */
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* 글씨와 바가 이미지 위로 오게 함 */
+.hp-label, .hp-track { position: relative; z-index: 1; }
+
+.hp-label { font-size: .62rem; letter-spacing: 2px; color: var(--text-dim); display: flex; justify-content: space-between; }
+.hp-label span:last-child { color: var(--text); font-weight: 700; }
+
+/* HP 바 트랙: 숫자에 맞게 너비 조절 가능하도록 수정 */
+.hp-track {
+  height: 10px;
+  background: rgba(255, 255, 255, .05);
+  border-radius: 6px;
+  overflow: hidden;
+  width: var(--max-w, 100%); /* 자바스크립트에서 보낸 너비 적용 */
+  min-width: 60px;
+}
+
+/* 기존 색상 및 애니메이션 로직 유지 */
+.hp-fill { height: 100%; border-radius: 6px; transition: width .55s cubic-bezier(.4, 0, .2, 1); }
+#player-hp-fill { background: linear-gradient(90deg, #4af0c8, #38c8a0); }
+#enemy-hp-fill  { background: linear-gradient(90deg, #f04a6a, #c02848); }
 
 /* ═══ DECK TRACKER ═══ */
 #tracker-area { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
@@ -638,6 +674,7 @@ function initStage(idx, hpOverride=null){
 }
 
 /* ── 카드 내기 ── */
+/* ── 카드 내기 (시간차 대결 연출 적용 버전) ── */
 async function playCard(handIdx) {
   if(!G.handDealt || G.dealAnimating) return;
   if(G.usedInHand.includes(handIdx)) return;
@@ -647,19 +684,27 @@ async function playCard(handIdx) {
   const res = judge(pCard.type, eCard.type);
   const overlay = $('clash-overlay');
 
-  // 1. 연출 시작: 오버레이에 정보 세팅
+  // 1. 연출 시작: 내 카드만 먼저 공개하고 적은 물음표로 표시
   $('p-clash').innerHTML = `<div class="card-icon" style="font-size:3rem">${CARD_TYPES[pCard.type].icon}</div><div class="card-dmg" style="font-size:1.5rem">${TIER[pCard.tier].dmg}</div>`;
   $('p-clash').className = `clash-card player-clash-card ${pCard.tier} ${pCard.type}`;
   
-  $('e-clash').innerHTML = `<div class="card-icon" style="font-size:3rem">${CARD_TYPES[eCard.type].icon}</div><div class="card-dmg" style="font-size:1.5rem">${TIER[eCard.tier].dmg}</div>`;
-  $('e-clash').className = `clash-card enemy-clash-card ${eCard.tier} ${eCard.type}`;
+  $('e-clash').innerHTML = `<div class="card-icon" style="font-size:3rem">❓</div>`;
+  $('e-clash').className = `clash-card enemy-clash-card`;
   
-  $('clash-result-text').textContent = "격돌 중...";
+  $('clash-result-text').textContent = "상대의 선택은...?";
+  $('clash-result-text').style.color = "var(--text)";
   overlay.classList.add('active');
   SFX.play();
 
-  // 2. 약간의 대기 후 결과 연출 (0.8초)
-  await new Promise(r => setTimeout(r, 800));
+  // 2. 0.5초 대기 후 적 카드 공개
+  await new Promise(r => setTimeout(r, 500));
+  
+  $('e-clash').innerHTML = `<div class="card-icon" style="font-size:3rem">${CARD_TYPES[eCard.type].icon}</div><div class="card-dmg" style="font-size:1.5rem">${TIER[eCard.tier].dmg}</div>`;
+  $('e-clash').className = `clash-card enemy-clash-card ${eCard.tier} ${eCard.type}`;
+  $('clash-result-text').textContent = "격돌!";
+
+  // 3. 다시 0.5초 대기 후 승패 결과 판정 및 연출
+  await new Promise(r => setTimeout(r, 500));
 
   if (res === 'win') {
     $('p-clash').classList.add('winner');
@@ -681,11 +726,11 @@ async function playCard(handIdx) {
     SFX.drawSfx();
   }
 
-  // 3. 연출 종료 및 실제 데이터 반영 (1.2초 후)
+  // 4. 연출 종료 및 실제 데이터 반영 (1.2초 후 오버레이 닫기)
   await new Promise(r => setTimeout(r, 1200));
   overlay.classList.remove('active');
 
-  // 기존 클로드 로직 실행 (HP 반영 및 로그 기록)
+  // 실제 HP 반영 및 로그 기록 로직
   const stage = STAGES[G.stageIdx];
   if(res==='win'){ G.enemyHp = Math.max(0, G.enemyHp - TIER[pCard.tier].dmg); addLog(`승리! ${TIER[pCard.tier].dmg} 데미지!`,'win'); }
   else if(res==='lose'){ G.playerHp = Math.max(0, G.playerHp - stage.enemyAtk); addLog(`패배! ${stage.enemyAtk} 데미지!`,'lose'); }
@@ -698,7 +743,7 @@ async function playCard(handIdx) {
   
   render();
 } // ← 반드시 render() 한 번만 호출
-
+  
 function addLog(msg,type=''){
   G.log.unshift({msg,type});
   if(G.log.length>40) G.log.pop();
@@ -763,27 +808,33 @@ function renderTitle(){
 
 /* ② BATTLE — render는 G 상태만 읽어서 그린다 */
 function renderBattle(){
-  const stage=STAGES[G.stageIdx];
-  const pPct=Math.max(0,(G.playerHp/G.playerMaxHp)*100);
-  const ePct=Math.max(0,(G.enemyHp /G.enemyMaxHp )*100);
-  const pInfo=PERSONALITIES.find(p=>p.key===G.cpuPersonality);
+  const stage = STAGES[G.stageIdx];
+  const bossData = BOSS_INTRO_DATA[G.stageIdx]; // 보스 이미지 데이터
+  
+  const pPct = Math.max(0, (G.playerHp / G.playerMaxHp) * 100);
+  const ePct = Math.max(0, (G.enemyHp / G.enemyMaxHp) * 100);
+  const pInfo = PERSONALITIES.find(p => p.key === G.cpuPersonality);
 
-  /* 플레이어 pip */
-  const drawIds =new Set(G.drawPile.map(c=>c.id));
-  const handIds =new Set(G.hand.map(c=>c.id));
-  const usedHIds=new Set(G.usedInHand.map(i=>G.hand[i]?.id));
-  const playerPips=G.deck.map(c=>{
-    const spent=usedHIds.has(c.id)||(!drawIds.has(c.id)&&!handIds.has(c.id));
-    return `<div class="pip ${c.type} tier-${c.tier} ${spent?'spent':''}">
+  // HP 1점당 15px로 전체 너비 계산 (HP가 높을수록 바가 길어짐)
+  const pTrackW = G.playerMaxHp * 15 + "px";
+  const eTrackW = G.enemyMaxHp * 15 + "px";
+
+  /* 플레이어 pip 계산 */
+  const drawIds = new Set(G.drawPile.map(c => c.id));
+  const handIds = new Set(G.hand.map(c => c.id));
+  const usedHIds = new Set(G.usedInHand.map(i => G.hand[i]?.id));
+  const playerPips = G.deck.map(c => {
+    const spent = usedHIds.has(c.id) || (!drawIds.has(c.id) && !handIds.has(c.id));
+    return `<div class="pip ${c.type} tier-${c.tier} ${spent ? 'spent' : ''}">
       <div class="pip-icon">${CARD_TYPES[c.type].icon}</div>
       <div class="pip-label">${c.type.slice(0,3).toUpperCase()}</div>
       <div class="pip-dmg">${TIER[c.tier].dmg}</div>
     </div>`;
   }).join('');
 
-  /* 적 pip */
-  const eDrawIds=new Set(G.enemyDrawPile.map(c=>c.id));
-  const enemyPips=G.enemyDeck.map(c=>{
+  /* 적 pip 계산 */
+  const eDrawIds = new Set(G.enemyDrawPile.map(c => c.id));
+  const enemyPips = G.enemyDeck.map(c => {
     if(eDrawIds.has(c.id)){
       return `<div class="pip enemy-unknown tier-${c.tier}"><div class="pip-icon">❓</div></div>`;
     }
@@ -794,26 +845,21 @@ function renderBattle(){
     </div>`;
   }).join('');
 
-  /* 남은 타입 요약 */
-  const rem=enemyRemaining();
-  const remSummary=['scissors','rock','paper'].map(t=>
-    rem[t]>0?`<span style="color:var(--${t})">${CARD_TYPES[t].icon}×${rem[t]}</span>`
-            :`<span style="opacity:.2">${CARD_TYPES[t].icon}×0</span>`
+  const rem = enemyRemaining();
+  const remSummary = ['scissors','rock','paper'].map(t =>
+    rem[t] > 0 ? `<span style="color:var(--${t})">${CARD_TYPES[t].icon}×${rem[t]}</span>`
+               : `<span style="opacity:.2">${CARD_TYPES[t].icon}×0</span>`
   ).join('&nbsp;');
 
-  /* ── 손패 HTML ──
-     handDealt=false → 빈 슬롯 3개
-     handDealt=true  → 카드 3장, usedInHand에 포함된 것은 used-card(opacity 0)
-  */
-  let handHTML='';
+  let handHTML = '';
   if(!G.handDealt){
-    handHTML='<div class="card card-placeholder"></div>'.repeat(3);
+    handHTML = '<div class="card card-placeholder"></div>'.repeat(3);
   } else {
-    handHTML=G.hand.map((c,i)=>{
-      const used=G.usedInHand.includes(i);
-      const ct=CARD_TYPES[c.type];
-      return `<div class="card ${c.type} tier-${c.tier} ${used?'used-card':''}"
-                   onclick="playCard(${i})" style="cursor:${used?'default':'pointer'}">
+    handHTML = G.hand.map((c, i) => {
+      const used = G.usedInHand.includes(i);
+      const ct = CARD_TYPES[c.type];
+      return `<div class="card ${c.type} tier-${c.tier} ${used ? 'used-card' : ''}"
+                   onclick="playCard(${i})" style="cursor:${used ? 'default' : 'pointer'}">
         <div class="card-icon">${ct.icon}</div>
         <div class="card-name">${ct.label}</div>
         <div class="card-dmg">${TIER[c.tier].dmg} DMG</div>
@@ -821,25 +867,26 @@ function renderBattle(){
     }).join('');
   }
 
-  const logHTML=G.log.slice(0,10).map(e=>
+  const logHTML = G.log.slice(0, 10).map(e =>
     `<div class="log-entry ${e.type}">${e.msg}</div>`
-  ).join('')||'<div class="log-entry info">카드를 받아 게임을 시작하세요...</div>';
+  ).join('') || '<div class="log-entry info">카드를 받아 게임을 시작하세요...</div>';
 
-  $('app').innerHTML=`
+  $('app').innerHTML = `
     ${titleBarHTML(`${stage.label} &nbsp;|&nbsp; ${stage.enemyIcon} ${stage.enemyName}`)}
-    ${pInfo?`<div style="text-align:center;margin-top:-4px">
+    ${pInfo ? `<div style="text-align:center;margin-top:-4px">
       <span class="personality-badge ${pInfo.badgeClass}">${pInfo.icon} CPU ${pInfo.label}</span>
-    </div>`:''}
+    </div>` : ''}
 
     <div class="panel">
       <div id="hp-area">
         <div class="hp-block">
           <div class="hp-label"><span>⚔️ PLAYER HP</span><span>${G.playerHp} / ${G.playerMaxHp}</span></div>
-          <div class="hp-track"><div class="hp-fill" id="player-hp-fill" style="width:${pPct}%"></div></div>
+          <div class="hp-track" style="--max-w: ${pTrackW}"><div class="hp-fill" id="player-hp-fill" style="width:${pPct}%"></div></div>
         </div>
         <div class="hp-block">
+          <div class="enemy-bg-sprite" style="background-image: url('${bossData.img}')"></div>
           <div class="hp-label"><span>${stage.enemyIcon} ENEMY HP</span><span>${G.enemyHp} / ${G.enemyMaxHp}</span></div>
-          <div class="hp-track"><div class="hp-fill" id="enemy-hp-fill" style="width:${ePct}%"></div></div>
+          <div class="hp-track" style="--max-w: ${eTrackW}"><div class="hp-fill" id="enemy-hp-fill" style="width:${ePct}%"></div></div>
         </div>
       </div>
     </div>
@@ -847,25 +894,18 @@ function renderBattle(){
     <div class="panel">
       <div id="tracker-area">
         <div class="tracker-block">
-          <div class="tracker-title">
-            <span>📋 MY DECK</span>
-            <span style="color:var(--text-dim);font-size:.55rem">드로우 대기 ${G.drawPile.length}장</span>
-          </div>
+          <div class="tracker-title"><span>📋 MY DECK</span><span style="color:var(--text-dim);font-size:.55rem">드로우 대기 ${G.drawPile.length}장</span></div>
           <div class="pip-row">${playerPips}</div>
         </div>
         <div class="tracker-block">
           <div class="tracker-title">
             <span style="color:var(--enemy)">🎴 ENEMY DECK</span>
-            <span style="font-size:.55rem;display:flex;align-items:center;gap:4px">
-              <span style="color:var(--text-dim)">남은 ${G.enemyDrawPile.length}장</span>
-              ${G.enemyDrawPile.length===0?'<span class="reshuffle-badge">재구성!</span>':''}
-            </span>
+            <span style="font-size:.55rem;display:flex;align-items:center;gap:4px"><span style="color:var(--text-dim)">남은 ${G.enemyDrawPile.length}장</span>${G.enemyDrawPile.length===0?'<span class="reshuffle-badge">재구성!</span>':''}</span>
           </div>
           <div class="pip-row">${enemyPips}</div>
           <div style="font-size:.6rem;margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
             <span style="font-size:.5rem;color:var(--text-dim);letter-spacing:1px">남은 타입:</span>
             ${remSummary}
-            <span style="font-size:.5rem;color:var(--muted)">| 테두리색 = 강화 힌트</span>
           </div>
         </div>
       </div>
@@ -877,17 +917,11 @@ function renderBattle(){
     </div>
 
     <div id="hand-zone">
-      <div id="draw-btn-wrap">
-        <button class="btn btn-draw" id="draw-btn"
-          onclick="handleDrawBtn()"
-          ${G.handDealt?'disabled':''}>
-          🃏 카드 받기
-        </button>
-      </div>
+      <div id="draw-btn-wrap"><button class="btn btn-draw" id="draw-btn" onclick="handleDrawBtn()" ${G.handDealt ? 'disabled' : ''}>🃏 카드 받기</button></div>
       <div id="hand-area">${handHTML}</div>
     </div>`;
 }
-
+  
 /* ── [카드 받기] 버튼 ──
    1) drawPlayerHand()로 상태 업데이트
    2) 손패 영역을 빈 슬롯으로 초기화
