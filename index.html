@@ -315,6 +315,20 @@ body::before {
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+/* ═══ BOSS INTRO SCREEN (추가) ═══ */
+#boss-intro { text-align:center; padding:30px 20px; display:flex; flex-direction:column; align-items:center; }
+.boss-img-frame {
+  width:240px; height:240px; border:4px solid var(--border); border-radius:15px;
+  background-size:cover; background-position:center; margin-bottom:20px;
+  box-shadow:0 0 30px rgba(0,0,0,0.6); animation: bossPop .5s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes bossPop { from{opacity:0; transform:scale(.7) rotate(-5deg)} to{opacity:1; transform:scale(1) rotate(0deg)} }
+.boss-dialogue {
+  font-family:'Black Han Sans', sans-serif; font-size:1.15rem; color:var(--accent2);
+  line-height:1.6; margin-bottom:25px; min-height:60px; word-break:keep-all;
+}
+  
 </style>
 </head>
 <body>
@@ -406,7 +420,25 @@ const TIER = {
   silver: { label:'SLV', dmg:5, color:'var(--silver)'   },
   gold:   { label:'GLD', dmg:7, color:'var(--gold)'     }
 };
+// 보스별 이미지와 대사 데이터
+const BOSS_INTRO_DATA = [
+  { img: 'stage1.jpg', talk: "길거리 양아치 정도야 껌이겠지" },
+  { img: 'stage2.jpg', talk: "양아치를 쓰러뜨렸더니 조폭 두목이 나타났네" },
+  { img: 'stage3.jpg', talk: "뭐야 이동네 오야봉 문동진?" }
+];
 
+/* 보스 인트로 화면을 그리는 함수 (추가) */
+function renderBossIntro() {
+  const data = BOSS_INTRO_DATA[G.stageIdx];
+  const stage = STAGES[G.stageIdx];
+  $('app').innerHTML = `
+    ${titleBarHTML(stage.label)}
+    <div id="boss-intro">
+      <div class="boss-img-frame" style="background-image: url('${data.img}')"></div>
+      <div class="boss-dialogue">"${data.talk}"</div>
+      <button class="btn btn-primary" onclick="G.screen='battle'; render();">⚔️ 대결 시작!</button>
+    </div>`;
+}
 const STAGES = [
   {
     id:1, name:'STAGE 1', label:'STAGE 1 — 街頭',
@@ -638,6 +670,7 @@ function titleBarHTML(sub=''){
 function render(){
   ({
     title:    renderTitle,
+    boss_intro: renderBossIntro,
     battle:   renderBattle,
     reward:   renderReward,
     reststop: renderRestStop,
@@ -956,7 +989,7 @@ function confirmRestStop(){
   }
   restChoice=null; restUpgradeIdx=null;
   initStage(G.stageIdx+1,G.playerHp);
-  G.screen='battle'; render();
+  G.screen='boss_intro'; render();
 }
 
 /* ⑤ GAME OVER */
@@ -997,7 +1030,7 @@ function startGame(){
   rewardPickIdx=null; restChoice=null; restUpgradeIdx=null;
   G.log=[];
   initStage(0,null);
-  G.screen='battle';
+ G.screen='boss_intro';
   render();
 }
 window.onload=()=>render();
