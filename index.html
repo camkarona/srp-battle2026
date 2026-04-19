@@ -800,31 +800,36 @@ function render(){
   })[G.screen]?.();
 }
 
-/* ① TITLE */
+/* ① TITLE — 디자인 및 제작자 정보 수정 버전 */
 function renderTitle(){
-  $('app').innerHTML=`
+  $('app').innerHTML = `
     <div id="title-screen">
       <div class="hero-ko">가위 바위 보 배틀</div>
       <div class="hero-en">S-R-P &nbsp; BATTLE</div>
       <div class="hero-ver">v1.5</div>
-      <div class="rps-deco"><span>✌️</span><span>✊</span><span>🖐️</span></div>
-      <div style="color:var(--text-dim);font-size:.76rem;max-width:360px;margin:0 auto 8px;line-height:1.9">
-        3스테이지를 클리어하라!<br>CPU가 덱 카운팅으로 전략을 짭니다 🧠
+      
+      <div class="rps-deco">
+        <span>✌️</span><span>✊</span><span>🖐️</span>
       </div>
-      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:20px">
-        ${PERSONALITIES.map(p=>`<span class="personality-badge ${p.badgeClass}">${p.icon} ${p.label}</span>`).join('')}
-      </div>
-      <button class="btn btn-primary" onclick="startGame()">⚔️ 게임 시작</button>
 
-/* 제작자 정보 추가 */
-<div style="margin-top:30px; font-size:.65rem; color:var(--text-dim); line-height:1.6; opacity:0.7; letter-spacing:1px;">
-  Credit : Karona = 정인휴 <br>
-  in Phnom Penh Cambodia
-</div>
+      <div style="margin-bottom: 40px;">
+        <button class="btn btn-primary" onclick="startGame()">⚔️ 게임 시작</button>
+      </div>
+
+      <div style="margin-top:50px; line-height:1.8; letter-spacing:1px; font-family:'Orbitron', sans-serif;">
+        <div style="font-size:.75rem; color:var(--accent2); font-weight:700; margin-bottom:4px;">
+          Developed by Karona (=정인휴)
+        </div>
+        <div style="font-size:.65rem; color:var(--text); opacity:0.9;">
+          April 2026
+        </div>
+        <div style="font-size:.65rem; color:var(--text-dim); opacity:0.7;">
+          in Phnom Penh, Cambodia
+        </div>
+      </div>
       
     </div>`;
 }
-
 /* ② BATTLE — render는 G 상태만 읽어서 그린다 */
 /* ② BATTLE — 상세 로그 및 접기 기능 적용 버전 */
 function renderBattle(){
