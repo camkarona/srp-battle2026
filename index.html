@@ -575,6 +575,7 @@ function shuffle(arr){
 */
 const G = {
   screen:'title', stageIdx:0,
+  logFolded: false,
   playerHp:10, playerMaxHp:10,
   deck:[], drawPile:[], discardPile:[],
   hand:[], usedInHand:[],
@@ -696,12 +697,23 @@ async function playCard(handIdx) {
   overlay.classList.add('active');
   SFX.play();
 
-  // 2. 0.5초 대기 후 적 카드 공개
-  await new Promise(r => setTimeout(r, 500));
-  
-  $('e-clash').innerHTML = `<div class="card-icon" style="font-size:3rem">${CARD_TYPES[eCard.type].icon}</div><div class="card-dmg" style="font-size:1.5rem">${TIER[eCard.tier].dmg}</div>`;
-  $('e-clash').className = `clash-card enemy-clash-card ${eCard.tier} ${eCard.type}`;
-  $('clash-result-text').textContent = "격돌!";
+/* 2. 대기 시간 및 CPU 뜸 들이기 연출 */
+let dramaDelay = 1000; // 기본 대기 시간 1초
+if (Math.random() < 0.25) { // 25% 확률로 CPU가 고민함
+  dramaDelay = 2500; 
+  $('clash-result-text').textContent = "상대가 신중하게 고민 중...";
+  $('clash-result-text').style.color = "var(--accent)";
+}
+
+await new Promise(r => setTimeout(r, dramaDelay));
+
+/* 적 카드 공개 및 로그 상세 기록 */
+$('e-clash').innerHTML = `<div class="card-icon" style="font-size:3rem">${CARD_TYPES[eCard.type].icon}</div><div class="card-dmg" style="font-size:1.5rem">${TIER[eCard.tier].dmg}</div>`;
+$('e-clash').className = `clash-card enemy-clash-card ${eCard.tier} ${eCard.type}`;
+
+// 상세 로그 기록
+const detailMsg = `나: ${CARD_TYPES[pCard.type].icon}(${TIER[pCard.tier].label}) vs 적: ${CARD_TYPES[eCard.type].icon}(${TIER[eCard.tier].label})`;
+addLog(detailMsg, 'info');
 
   // 3. 다시 0.5초 대기 후 승패 결과 판정 및 연출
   await new Promise(r => setTimeout(r, 500));
@@ -803,23 +815,30 @@ function renderTitle(){
         ${PERSONALITIES.map(p=>`<span class="personality-badge ${p.badgeClass}">${p.icon} ${p.label}</span>`).join('')}
       </div>
       <button class="btn btn-primary" onclick="startGame()">⚔️ 게임 시작</button>
+
+/* 제작자 정보 추가 */
+<div style="margin-top:30px; font-size:.65rem; color:var(--text-dim); line-height:1.6; opacity:0.7; letter-spacing:1px;">
+  Credit : Karona = 정인휴 <br>
+  in Phnom Penh Cambodia
+</div>
+      
     </div>`;
 }
 
 /* ② BATTLE — render는 G 상태만 읽어서 그린다 */
+/* ② BATTLE — 상세 로그 및 접기 기능 적용 버전 */
 function renderBattle(){
   const stage = STAGES[G.stageIdx];
-  const bossData = BOSS_INTRO_DATA[G.stageIdx]; // 보스 이미지 데이터
+  const bossData = BOSS_INTRO_DATA[G.stageIdx];
   
   const pPct = Math.max(0, (G.playerHp / G.playerMaxHp) * 100);
   const ePct = Math.max(0, (G.enemyHp / G.enemyMaxHp) * 100);
   const pInfo = PERSONALITIES.find(p => p.key === G.cpuPersonality);
 
-  // HP 1점당 15px로 전체 너비 계산 (HP가 높을수록 바가 길어짐)
   const pTrackW = G.playerMaxHp * 15 + "px";
   const eTrackW = G.enemyMaxHp * 15 + "px";
 
-  /* 플레이어 pip 계산 */
+  /* 플레이어/적 카드 추적(pip) 로직 (기존 유지) */
   const drawIds = new Set(G.drawPile.map(c => c.id));
   const handIds = new Set(G.hand.map(c => c.id));
   const usedHIds = new Set(G.usedInHand.map(i => G.hand[i]?.id));
@@ -832,7 +851,6 @@ function renderBattle(){
     </div>`;
   }).join('');
 
-  /* 적 pip 계산 */
   const eDrawIds = new Set(G.enemyDrawPile.map(c => c.id));
   const enemyPips = G.enemyDeck.map(c => {
     if(eDrawIds.has(c.id)){
@@ -851,6 +869,7 @@ function renderBattle(){
                : `<span style="opacity:.2">${CARD_TYPES[t].icon}×0</span>`
   ).join('&nbsp;');
 
+  /* 손패 렌더링 (기존 유지) */
   let handHTML = '';
   if(!G.handDealt){
     handHTML = '<div class="card card-placeholder"></div>'.repeat(3);
@@ -867,9 +886,10 @@ function renderBattle(){
     }).join('');
   }
 
+  /* 로그 리스트 생성 */
   const logHTML = G.log.slice(0, 10).map(e =>
     `<div class="log-entry ${e.type}">${e.msg}</div>`
-  ).join('') || '<div class="log-entry info">카드를 받아 게임을 시작하세요...</div>';
+  ).join('') || '<div class="log-entry info">카드를 내어 대결을 기록하세요...</div>';
 
   $('app').innerHTML = `
     ${titleBarHTML(`${stage.label} &nbsp;|&nbsp; ${stage.enemyIcon} ${stage.enemyName}`)}
@@ -892,6 +912,18 @@ function renderBattle(){
     </div>
 
     <div class="panel">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+        <div style="font-size:.58rem; letter-spacing:2px; color:var(--text-dim);">BATTLE LOG</div>
+        <button onclick="G.logFolded = !G.logFolded; render();" style="background:none; border:none; color:var(--accent2); font-size:.6rem; cursor:pointer;">
+          ${G.logFolded ? '펼치기 ▲' : '접기 ▼'}
+        </button>
+      </div>
+      <div id="log-area" style="display: ${G.logFolded ? 'none' : 'flex'}; max-height: 100px; flex-direction: column; overflow-y: auto;">
+        ${logHTML}
+      </div>
+    </div>
+
+    <div class="panel">
       <div id="tracker-area">
         <div class="tracker-block">
           <div class="tracker-title"><span>📋 MY DECK</span><span style="color:var(--text-dim);font-size:.55rem">드로우 대기 ${G.drawPile.length}장</span></div>
@@ -909,11 +941,6 @@ function renderBattle(){
           </div>
         </div>
       </div>
-    </div>
-
-    <div class="panel">
-      <div style="font-size:.58rem;letter-spacing:2px;color:var(--text-dim);margin-bottom:5px">BATTLE LOG</div>
-      <div id="log-area">${logHTML}</div>
     </div>
 
     <div id="hand-zone">
@@ -1124,6 +1151,10 @@ function renderVictory(){
      ════════════════════════════════════════ -->
 <script>
 function startGame(){
+  BGM.play(); // 게임 시작 클릭 시 음악 강제 재생 시작
+  G.deck=buildStarterDeck();
+  // ... 나머지 기존 코드 ...
+}
   G.deck=buildStarterDeck();
   rewardPickIdx=null; restChoice=null; restUpgradeIdx=null;
   G.log=[];
