@@ -64,9 +64,9 @@ body::before {
 #title-bar { text-align: center; padding: 12px 0 2px; }
 .title-main, .hero-ko, .boss-dialogue, .opt-name, .rest-title {
   font-family: var(--font-main) !important;
-  font-weight: 800; /* 너무 두껍지 않게 조절 */
+  font-weight: 800;
   letter-spacing: -0.5px;
-}
+} /* ← 이 중괄호가 꼭 있어야 합니다! */
 .title-sub {
   font-family: 'Orbitron', sans-serif;
   font-size: .7rem; font-weight: 700; letter-spacing: 6px;
@@ -847,9 +847,7 @@ function renderBattle(){
 
   const ePct = Math.max(0, (G.enemyHp / G.enemyMaxHp) * 100);
   const eTrackW = G.enemyMaxHp * 15 + "px";
-  
-  const pPct = Math.max(0, (G.playerHp / G.playerMaxHp) * 100);
-  const ePct = Math.max(0, (G.enemyHp / G.enemyMaxHp) * 100);
+
   const pInfo = PERSONALITIES.find(p => p.key === G.cpuPersonality);
 
   const pTrackW = G.playerMaxHp * 15 + "px";
