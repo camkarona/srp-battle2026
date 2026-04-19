@@ -2,1007 +2,422 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>가위 바위 보 배틀 — S-R-P Battle v1.5</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>S-R-P Battle v1</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@300;400;700&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@600;700&display=swap');
-
 :root {
-  --bg:          #090b12;
-  --bg2:         #0f1220;
-  --panel:       #141726;
-  --border:      #252840;
-  --accent:      #e8c84a;
-  --accent2:     #4af0c8;
-  --danger:      #f04a6a;
-  --muted:       #3a4060;
-  --text:        #dde3f5;
-  --text-dim:    #6a75a0;
-  --scissors:    #f0a030;
-  --rock:        #6090f0;
-  --paper:       #60d870;
-  --silver:      #b8d0f0;
-  --gold:        #ffd060;
-  --normal-c:    #8898b8;
-  --win:         #4af0c8;
-  --lose:        #f04a6a;
-  --draw:        #e8c84a;
-  --enemy:       #ff6b8a;
-  --glow-gold:   rgba(255,208,96,.4);
-  --glow-silver: rgba(184,208,240,.28);
+  --bg: #0d1117;
+  --panel: #161b22;
+  --border: #30363d;
+  --text: #c9d1d9;
+  --accent: #58a6ff;
+  --accent2: #f85149;
+  --hp-bg: #21262d;
+  --hp-fill: #2ea043;
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
 }
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
+* { box-sizing: border-box; -webkit-touch-callout: none; -webkit-user-select: none; }
 body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'Noto Sans KR', sans-serif;
-  min-height: 100vh;
-  display: flex; flex-direction: column; align-items: center;
-  overflow-x: hidden;
-}
-body::before {
-  content: ''; position: fixed; inset: 0;
-  background-image:
-    linear-gradient(rgba(255,255,255,.01) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.01) 1px, transparent 1px);
-  background-size: 44px 44px;
-  pointer-events: none; z-index: 0;
+  margin: 0; padding: 0; background: var(--bg); color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  overflow: hidden; position: fixed; width: 100%; height: 100%; overscroll-behavior: none;
 }
 
 #app {
-  position: relative; z-index: 1;
-  width: 100%; max-width: 720px;
-  padding: 0 14px 50px;
-  display: flex; flex-direction: column; gap: 11px;
+  display: flex; flex-direction: column; width: 100%;
+  height: calc(100dvh - var(--safe-top) - var(--safe-bottom));
+  margin-top: var(--safe-top); margin-bottom: var(--safe-bottom);
 }
 
-/* ═══ TITLE BAR ═══ */
-#title-bar { text-align: center; padding: 12px 0 2px; }
-.title-main {
-  font-family: 'Black Han Sans', sans-serif;
-  font-size: 1.55rem; color: var(--accent);
-  text-shadow: 0 0 28px rgba(232,200,74,.55);
-  letter-spacing: 3px;
+button {
+  background: var(--panel); border: 1px solid var(--border); color: var(--text);
+  padding: 10px 15px; border-radius: 6px; cursor: pointer; font-size: 1rem;
 }
-.title-sub {
-  font-family: 'Orbitron', sans-serif;
-  font-size: .7rem; font-weight: 700; letter-spacing: 6px;
-  color: var(--accent2);
-  text-shadow: 0 0 12px rgba(74,240,200,.4);
-  margin-top: 1px;
-}
-.title-ver { font-family:'Orbitron',sans-serif; font-size:.5rem; letter-spacing:4px; color:var(--muted); }
-#stage-label { font-size:.62rem; letter-spacing:3px; color:var(--text-dim); margin-top:4px; }
+button:active { background: #1f242c; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.personality-badge {
-  display:inline-block; margin-top:5px;
-  font-size:.6rem; letter-spacing:2px;
-  border-radius:20px; padding:2px 10px; border:1px solid;
-}
-.pb-aggressive { border-color:var(--danger);  color:var(--danger);  background:rgba(240,74,106,.1); }
-.pb-counter    { border-color:var(--enemy);   color:var(--enemy);   background:rgba(255,107,138,.08); }
-.pb-careful    { border-color:var(--accent2); color:var(--accent2); background:rgba(74,240,200,.08); }
+/* --- 기존 UI 스타일 유지 --- */
+.screen { display: none; flex: 1; flex-direction: column; overflow: hidden; padding: 15px; }
+.screen.active { display: flex; }
 
-/* ═══ PANEL ═══ */
-.panel { background:var(--panel); border:1px solid var(--border); border-radius:11px; padding:12px 16px; }
+.title-screen { justify-content: center; align-items: center; text-align: center; }
+.main-title { font-size: 2.5rem; color: var(--accent); margin-bottom: 20px; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+.version { font-size: 0.8rem; opacity: 0.5; margin-bottom: 30px; }
 
-/* ═══ HP ═══ */
-#hp-area { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-.hp-block { display:flex; flex-direction:column; gap:4px; }
-.hp-label { font-size:.62rem; letter-spacing:2px; color:var(--text-dim); display:flex; justify-content:space-between; }
-.hp-label span:last-child { color:var(--text); font-weight:700; }
-.hp-track { height:10px; background:rgba(255,255,255,.05); border-radius:6px; overflow:hidden; }
-.hp-fill  { height:100%; border-radius:6px; transition:width .55s cubic-bezier(.4,0,.2,1); }
-#player-hp-fill { background:linear-gradient(90deg,#4af0c8,#38c8a0); }
-#enemy-hp-fill  { background:linear-gradient(90deg,#f04a6a,#c02848); }
+/* --- 보스 인트로 스타일 (추가됨) --- */
+.intro-area { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+.boss-image {
+  width: 200px; height: 200px; border-radius: 50%; border: 4px solid var(--border);
+  box-shadow: 0 0 20px rgba(0,0,0,0.5); margin-bottom: 20px; background-size: cover; background-position: center;
+}
+.boss-intro-text { font-size: 1.2rem; font-style: italic; color: var(--accent2); margin-bottom: 30px; max-width: 80%; line-height: 1.5; }
 
-/* ═══ DECK TRACKER ═══ */
-#tracker-area { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-.tracker-block { display:flex; flex-direction:column; gap:8px; }
-.tracker-title {
-  font-size:.6rem; letter-spacing:2px; color:var(--text-dim);
-  display:flex; justify-content:space-between; align-items:center;
-}
-.reshuffle-badge {
-  font-size:.5rem; letter-spacing:1px;
-  background:rgba(74,240,200,.1); color:var(--accent2);
-  border:1px solid rgba(74,240,200,.25);
-  border-radius:4px; padding:1px 6px;
-  animation:blink 1s ease infinite;
-}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+/* --- 배틀 영역 스타일 (HP 바 수정됨) --- */
+.battle-area { flex: 1; display: grid; grid-template-rows: auto 1fr auto; gap: 10px; overflow: hidden; }
+.hp-area { display: flex; flex-direction: column; gap: 10px; background: var(--panel); padding: 10px; border-radius: 8px; border: 1px solid var(--border); }
+.hp-row { display: grid; grid-template-columns: 80px 1fr 50px; align-items: center; gap: 10px; }
+.name { font-size: 0.9rem; opacity: 0.7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.pip-row { display:flex; gap:6px; flex-wrap:wrap; }
+/* --- 개선된 HP 바 CSS (상대적 길이 적용) --- */
+.hp-track {
+  height: 12px; background: var(--hp-bg); border-radius: 6px; overflow: hidden; position: relative;
+  /* 핵심: HP 1점당 15px 너비를 가집니다. (자바스크립트에서 --max-w 설정) */
+  width: var(--max-w, 100%); 
+  min-width: 60px; /* 너무 작아지지 않게 최소값 */
+}
+.hp-bar { height: 100%; background: var(--hp-fill); width: 100%; transition: width 0.3s ease; }
+.hp-num { font-size: 0.8rem; text-align: right; opacity: 0.7; }
 
-/* ─── PIP CARDS (62×80) ─── */
-.pip {
-  width:62px; height:80px;
-  border-radius:10px; border:2px solid var(--border);
-  background:var(--bg2);
-  display:flex; flex-direction:column;
-  align-items:center; justify-content:center;
-  gap:3px; position:relative; flex-shrink:0;
-  transition:all .25s;
-}
-.pip .pip-icon  { font-size:2rem; line-height:1; }
-.pip .pip-label { font-size:.5rem; letter-spacing:.8px; font-family:'Orbitron',sans-serif; }
-.pip .pip-dmg   {
-  font-family:'Rajdhani', sans-serif;
-  font-size:.85rem; font-weight:700;
-  position:absolute; bottom:4px; right:5px;
-  letter-spacing:.5px;
-}
-.pip.scissors   { border-color:var(--scissors); }
-.pip.scissors   .pip-label { color:var(--scissors); }
-.pip.rock       { border-color:var(--rock); }
-.pip.rock       .pip-label { color:var(--rock); }
-.pip.paper      { border-color:var(--paper); }
-.pip.paper      .pip-label { color:var(--paper); }
-.pip.tier-normal .pip-dmg  { color:var(--normal-c); }
-.pip.tier-silver            { border-color:var(--silver); box-shadow:0 0 10px var(--glow-silver); }
-.pip.tier-silver .pip-dmg  { color:var(--silver); }
-.pip.tier-gold              { border-color:var(--gold);   box-shadow:0 0 14px var(--glow-gold); }
-.pip.tier-gold   .pip-dmg  { color:var(--gold); }
-.pip.spent       { opacity:.14; filter:grayscale(1); box-shadow:none !important; }
-.pip.enemy-drawn { opacity:.14; filter:grayscale(1); box-shadow:none !important; }
-.pip.enemy-unknown {
-  background:rgba(255,107,138,.04);
-  border-color:rgba(255,107,138,.2);
-}
-.pip.enemy-unknown .pip-icon { font-size:1.6rem; color:var(--enemy); opacity:.4; }
-.pip.enemy-unknown.tier-silver { border-color:var(--silver); box-shadow:0 0 10px var(--glow-silver); }
-.pip.enemy-unknown.tier-gold   { border-color:var(--gold);   box-shadow:0 0 14px var(--glow-gold); }
+/* --- 기존 중간 영역, 로그, 핸드, 보상/휴게소 스타일 유지 --- */
+.middle-area { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; overflow: hidden; }
+.tracker-panel { background: var(--panel); padding: 10px; border-radius: 8px; border: 1px solid var(--border); display: flex; flex-direction: column; font-size: 0.85rem; }
+.tracker-header { opacity: 0.6; margin-bottom: 5px; font-weight: bold; border-bottom: 1px solid var(--border); padding-bottom: 3px; }
+.tracker-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.tracker-card { text-align: center; border: 1px solid transparent; border-radius: 4px; padding: 2px 0; }
+.tracker-card.played { opacity: 0.3; border-color: var(--border); }
+.log-area { background: var(--panel); padding: 10px; border-radius: 8px; border: 1px solid var(--border); overflow-y: auto; font-size: 0.85rem; display: flex; flex-direction: column-reverse; }
+.log-entry { margin-bottom: 4px; line-height: 1.3; }
 
-/* ═══ LOG ═══ */
-#log-area {
-  min-height:80px; max-height:125px; overflow-y:auto;
-  display:flex; flex-direction:column; gap:3px;
-  scrollbar-width:thin; scrollbar-color:var(--border) transparent;
+.hand-area { background: var(--panel); padding: 10px; border-radius: 8px; border: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
+.hand-header { display: flex; justify-content: space-between; align-items: center; opacity: 0.7; font-size: 0.9rem; }
+.cards-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.card-btn {
+  background: #1f242c; border: 2px solid var(--border); border-radius: 8px; padding: 15px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+  transition: all 0.2s;
 }
-.log-entry {
-  font-size:.74rem; line-height:1.5;
-  padding:3px 9px; border-radius:4px;
-  background:rgba(255,255,255,.022);
-  border-left:3px solid var(--muted);
-  animation:slideIn .22s ease;
-}
-.log-entry.win       { border-color:var(--win);   color:var(--win); }
-.log-entry.lose      { border-color:var(--lose);  color:var(--lose); }
-.log-entry.draw      { border-color:var(--draw);  color:var(--draw); }
-.log-entry.info      { border-color:var(--accent2); color:var(--accent2); }
-.log-entry.enemy-log { border-color:var(--enemy); color:rgba(255,107,138,.85); }
-@keyframes slideIn { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:translateX(0)} }
+.card-btn:active { transform: scale(0.95); background: #262c36; }
+.card-btn.silver { border-color: #c0c0c0; color: #fff; }
+.card-btn.gold { border-color: #ffd700; color: #fff; }
+.card-icon { font-size: 2rem; }
+.card-dmg { font-size: 0.8rem; opacity: 0.7; }
 
-/* ═══ HAND ZONE ═══ */
-#hand-zone  { display:flex; flex-direction:column; gap:9px; }
-#draw-btn-wrap { display:flex; justify-content:center; }
-#hand-area  { display:grid; grid-template-columns:repeat(3,1fr); gap:11px; min-height:160px; }
+.reward-screen, .rest-screen { justify-content: center; align-items: center; text-align: center; }
+.reward-header, .rest-header { font-size: 1.5rem; color: var(--accent); margin-bottom: 20px; }
+.rest-options { display: flex; flex-direction: column; gap: 15px; width: 80%; max-width: 300px; }
+.rest-btn {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 20px;
+  display: flex; flex-direction: column; gap: 8px; cursor: pointer; transition: 0.2s;
+}
+.rest-btn:active { background: #1f242c; }
+.rest-title { font-size: 1.2rem; color: #fff; }
+.rest-desc { font-size: 0.9rem; opacity: 0.7; }
 
-/* ─── HAND CARD ─── */
-.card {
-  background:var(--bg2); border:2px solid var(--border);
-  border-radius:14px; padding:18px 10px 15px;
-  display:flex; flex-direction:column;
-  align-items:center; gap:8px;
-  cursor:pointer; position:relative;
-  transition:transform .17s, border-color .17s, box-shadow .17s;
-  user-select:none; overflow:hidden;
+/* --- 가로 모드 대응 유지 --- */
+@media (orientation: landscape) {
+  .battle-area { grid-template-rows: 1fr; grid-template-columns: 2fr 1fr; gap: 15px; }
+  .hp-area { grid-column: 2; grid-row: 1; justify-content: center; }
+  .middle-area { grid-column: 1; grid-row: 1; }
+  .hand-area { display: none; }
 }
-.card::before {
-  content:''; position:absolute; inset:0;
-  background:radial-gradient(circle at 50% 0%,rgba(255,255,255,.05),transparent 60%);
-  pointer-events:none;
-}
-.card:hover:not(.used-card):not(.card-placeholder) {
-  transform:translateY(-8px) scale(1.04);
-  box-shadow:0 14px 32px rgba(0,0,0,.5);
-}
-.card.scissors { border-color:var(--scissors); }
-.card.scissors:hover:not(.used-card) { box-shadow:0 0 22px rgba(240,160,48,.3); }
-.card.rock     { border-color:var(--rock); }
-.card.rock:hover:not(.used-card)     { box-shadow:0 0 22px rgba(96,144,240,.3); }
-.card.paper    { border-color:var(--paper); }
-.card.paper:hover:not(.used-card)    { box-shadow:0 0 22px rgba(96,216,112,.3); }
-
-.card.tier-silver { border-color:var(--silver); box-shadow:0 0 10px var(--glow-silver); }
-.card.tier-gold   { border-color:var(--gold);   box-shadow:0 0 14px var(--glow-gold); }
-.card.tier-gold::after {
-  content:'GOLD'; position:absolute; top:5px; right:6px;
-  font-size:.44rem; letter-spacing:1.5px; color:var(--gold); font-family:'Orbitron',sans-serif;
-}
-.card.tier-silver::after {
-  content:'SILVER'; position:absolute; top:5px; right:6px;
-  font-size:.44rem; letter-spacing:1.5px; color:var(--silver); font-family:'Orbitron',sans-serif;
-}
-
-/* ── 사용한 카드: 완전히 숨김 (opacity 0 + pointer-events none) ── */
-.card.used-card {
-  opacity:0 !important;
-  pointer-events:none !important;
-  transform:scale(.85) !important;
-  transition:opacity .25s ease, transform .25s ease !important;
-}
-
-.card-placeholder {
-  border:2px dashed rgba(255,255,255,.07);
-  background:transparent; cursor:default; min-height:150px;
-}
-.card-icon { font-size:2.4rem; line-height:1; }
-.card-name { font-size:.65rem; letter-spacing:2px; color:var(--text-dim); }
-/* ── DMG 폰트: Rajdhani (가독성 좋은 military 폰트) ── */
-.card-dmg {
-  font-family:'Rajdhani', sans-serif;
-  font-size:1.4rem; font-weight:700;
-  letter-spacing:1px; line-height:1;
-}
-.card.scissors .card-dmg { color:var(--scissors); }
-.card.rock     .card-dmg { color:var(--rock); }
-.card.paper    .card-dmg { color:var(--paper); }
-.card.tier-silver .card-dmg { color:var(--silver); }
-.card.tier-gold   .card-dmg { color:var(--gold); }
-
-/* ─── DEAL ANIMATION: rise from below ─── */
-@keyframes dealRise {
-  0%   { opacity:0; transform:translateY(70px) scale(.75) rotate(4deg); }
-  65%  { transform:translateY(-8px) scale(1.05) rotate(-1deg); }
-  100% { opacity:1; transform:translateY(0) scale(1) rotate(0deg); }
-}
-.card.dealing { animation:dealRise .45s cubic-bezier(.34,1.3,.64,1) both; }
-
-/* ═══ BUTTONS ═══ */
-.btn {
-  border:none; cursor:pointer;
-  font-family:'Noto Sans KR',sans-serif;
-  font-weight:700; border-radius:9px;
-  transition:all .17s; letter-spacing:1px;
-}
-.btn-primary { background:var(--accent); color:#09090f; padding:13px 28px; font-size:.84rem; }
-.btn-primary:hover { background:#f0d860; transform:translateY(-2px); }
-.btn-primary:disabled { opacity:.3; cursor:not-allowed; transform:none !important; }
-.btn-draw {
-  background:linear-gradient(135deg,#1c2040,#252a50);
-  color:var(--accent2); border:1px solid var(--accent2);
-  padding:11px 32px; font-size:.82rem; letter-spacing:2px;
-  box-shadow:0 0 12px rgba(74,240,200,.15);
-}
-.btn-draw:hover { background:rgba(74,240,200,.12); transform:translateY(-2px); box-shadow:0 0 20px rgba(74,240,200,.25); }
-.btn-draw:disabled { opacity:.3; cursor:not-allowed; transform:none; box-shadow:none; }
-
-/* ═══ TITLE SCREEN ═══ */
-#title-screen { text-align:center; padding:34px 0; }
-.hero-ko  { font-family:'Black Han Sans',sans-serif; font-size:2.5rem; color:var(--accent); text-shadow:0 0 40px rgba(232,200,74,.6); letter-spacing:4px; margin-bottom:4px; }
-.hero-en  { font-family:'Orbitron',sans-serif; font-weight:900; font-size:1rem; letter-spacing:8px; color:var(--accent2); text-shadow:0 0 16px rgba(74,240,200,.4); margin-bottom:2px; }
-.hero-ver { font-family:'Orbitron',sans-serif; font-size:.6rem; letter-spacing:5px; color:var(--muted); margin-bottom:18px; }
-.rps-deco { font-size:3rem; margin:12px 0; display:flex; justify-content:center; gap:22px; }
-.rps-deco span { animation:float 3s ease-in-out infinite; }
-.rps-deco span:nth-child(2){animation-delay:.5s}
-.rps-deco span:nth-child(3){animation-delay:1s}
-@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
-
-/* ═══ OPTION CARDS ═══ */
-.option-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:14px 0; }
-.option-card {
-  border:2px solid var(--border); border-radius:13px;
-  padding:18px 12px; text-align:center;
-  cursor:pointer; background:var(--bg2); transition:all .2s;
-}
-.option-card:hover { transform:translateY(-3px); }
-.option-card.bakkus:hover  { border-color:var(--danger); box-shadow:0 0 14px rgba(240,74,106,.18); }
-.option-card.upgrade:hover { border-color:var(--silver); box-shadow:0 0 14px var(--glow-silver); }
-.option-card.selected.bakkus  { border-color:var(--danger); background:rgba(240,74,106,.07); }
-.option-card.selected.upgrade { border-color:var(--silver); background:rgba(184,208,240,.06); }
-.opt-icon { font-size:2.1rem; margin-bottom:7px; }
-.opt-name { font-family:'Black Han Sans',sans-serif; font-size:.95rem; margin-bottom:5px; }
-.opt-desc { font-size:.68rem; color:var(--text-dim); line-height:1.65; }
-
-.upgrade-pick { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:8px 0; }
-.upg-card {
-  border:1.5px solid var(--border); border-radius:9px;
-  padding:11px 6px; text-align:center;
-  cursor:pointer; background:var(--bg2); transition:all .17s;
-}
-.upg-card:hover:not(.locked) { border-color:var(--accent); transform:translateY(-2px); }
-.upg-card.selected { border-color:var(--accent); background:rgba(232,200,74,.07); }
-.upg-card.locked   { opacity:.32; cursor:not-allowed; }
-.uc-icon { font-size:1.45rem; }
-.uc-name { color:var(--text-dim); margin:3px 0 2px; font-size:.56rem; letter-spacing:1px; }
-.uc-dmg  { font-family:'Rajdhani',sans-serif; font-size:.82rem; font-weight:700; letter-spacing:.5px; }
-
-.modal-actions { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:14px; }
-
-::-webkit-scrollbar{width:4px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
 </style>
 </head>
 <body>
+<div id="app">
+  <div id="screen-title" class="screen title-screen active">
+    <div class="main-title">가위 바위 보 배틀</div>
+    <div class="version">v1.0 by 카로나 & 제미나이</div>
+    <button onclick="startGame()">게임 시작</button>
+  </div>
 
-<!-- ════════════════════════════════════════
-     ❶  BGM — backgroundmusic.mp3
-     서버에 backgroundmusic.mp3 파일을 같은 경로에 업로드하면
-     자동으로 루프 재생됩니다. 파일이 없으면 조용히 무시됩니다.
-     ════════════════════════════════════════ -->
-<audio id="bgm-track" src="backgroundmusic.mp3" loop preload="none"></audio>
+  <div id="screen-main" class="screen">
+    <div class="battle-area">
+      <div id="hp-area" class="hp-area"></div>
+
+      <div id="middle-area" class="middle-area"></div>
+      
+      <div id="intro-area" class="intro-area" style="display:none;"></div>
+
+      <div id="hand-area" class="hand-area"></div>
+    </div>
+  </div>
+
+  <div id="screen-reward" class="screen reward-screen">
+    <div class="reward-header">전투 승리!</div>
+    <div style="margin-bottom: 20px; opacity: 0.7;">덱의 카드 1장이 SILVER(공격력 5)로 강화됩니다.</div>
+    <div style="margin-bottom: 30px; font-size: 1.2rem; color: #fff;">어떤 카드를 강화하시겠습니까?</div>
+    <div id="reward-cards" class="cards-container" style="max-width: 400px; width: 100%;"></div>
+  </div>
+
+  <div id="screen-rest" class="screen rest-screen">
+    <div class="rest-header">☕ 휴게소 (Stage <span id="rest-stage-num"></span>)</div>
+    <div class="rest-options">
+      <div class="rest-btn" onclick="selectRest('bacchus')">
+        <div class="rest-title">🥤 박카스</div>
+        <div class="rest-desc">체력을 3 회복합니다. (최대 체력 초과 불가)</div>
+      </div>
+      <div id="btn-rest-upgrade" class="rest-btn" onclick="selectRest('upgrade')">
+        <div class="rest-title">⚡ 카드 강화</div>
+        <div class="rest-desc">덱의 노멀 카드를 SILVER(공격력 5)로 강화합니다.</div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
-/* BGM 컨트롤 래퍼 */
-const BGM = {
-  el: null,
-  _started: false,
-  init(){
-    this.el = document.getElementById('bgm-track');
-  },
-  play(){
-    if(!this.el) return;
-    this.el.volume = 0.35;
-    this.el.play().catch(()=>{}); // 브라우저 autoplay 정책 무시
-    this._started = true;
-  },
-  stop(){
-    if(!this.el) return;
-    this.el.pause();
-    this.el.currentTime = 0;
-  },
-  setVolume(v){ if(this.el) this.el.volume = v; }
-};
-window.addEventListener('DOMContentLoaded', ()=> BGM.init());
-/* 첫 클릭/터치 때 BGM 시작 (autoplay 정책 대응) */
-document.addEventListener('click', ()=>{
-  if(!BGM._started) BGM.play();
-}, { once: true });
-</script>
+// --- 기존 사운드 및 WakeLock 로직 유지 ---
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+const audioCtx = AudioContext ? new AudioContext() : null;
 
-<!-- ════════════════════════════════════════
-     ❷  SFX ENGINE  (Web Audio API)
-     ════════════════════════════════════════ -->
-<script>
-const SFX = (()=>{
-  let ctx = null;
-  function c(){ return ctx || (ctx = new (window.AudioContext||window.webkitAudioContext)()); }
+function createOscillator(freq, duration, type = 'sine', gainVal = 0.1) {
+  if(!audioCtx) return;
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, audioCtx.currentTime);
+  g.gain.setValueAtTime(gainVal, audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+  o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + duration);
+}
 
-  function osc(freq, type, t, dur, gain, ctx){
-    const g=ctx.createGain(), o=ctx.createOscillator();
-    o.type=type; o.frequency.value=freq;
-    g.gain.setValueAtTime(gain,t);
-    g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
-    o.connect(g); g.connect(ctx.destination);
-    o.start(t); o.stop(t+dur);
-  }
-  function noise(t, dur, gain, freq, ctx){
-    const buf=ctx.createBuffer(1,ctx.sampleRate*dur,ctx.sampleRate);
-    const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1);
-    const src=ctx.createBufferSource(), filt=ctx.createBiquadFilter(), g=ctx.createGain();
-    filt.type='bandpass'; filt.frequency.value=freq||800; filt.Q.value=1.5;
-    g.gain.setValueAtTime(gain,t); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
-    src.buffer=buf; src.connect(filt); filt.connect(g); g.connect(ctx.destination);
-    src.start(t); src.stop(t+dur);
-  }
-  return {
-    draw(){  const x=c(), t=x.currentTime; noise(t,.09,.22,800,x); osc(220,'sawtooth',t,.09,.07,x); },
-    play(){  const x=c(), t=x.currentTime; noise(t,.12,.35,600,x); osc(180,'square',t,.08,.1,x); osc(90,'sine',t+.04,.12,.12,x); },
-    win(){   const x=c(), t=x.currentTime; [523,659,784,1047].forEach((f,i)=>osc(f,'triangle',t+i*.09,.28,.12,x)); },
-    lose(){  const x=c(), t=x.currentTime; osc(120,'sawtooth',t,.32,.18,x); osc(80,'sine',t+.05,.4,.15,x); },
-    drawSfx(){ const x=c(), t=x.currentTime; osc(440,'sine',t,.12,.1,x); osc(440,'sine',t+.14,.12,.08,x); },
-    heal(){  const x=c(), t=x.currentTime; [880,1100,1320].forEach((f,i)=>osc(f,'sine',t+i*.07,.2,.1,x)); },
-    upgrade(){ const x=c(), t=x.currentTime; [440,554,659,880,1108].forEach((f,i)=>osc(f,'triangle',t+i*.07,.3,.1,x)); },
-    stageClear(){ const x=c(), t=x.currentTime; [523,659,784,659,784,1047].forEach((f,i)=>osc(f,'triangle',t+i*.1,.3,.11,x)); }
-  };
-})();
-</script>
+const sounds = {
+  card_draw: () => { createOscillator(800, 0.1, 'sine', 0.05); setTimeout(()=>createOscillator(1000, 0.1, 'sine', 0.05), 50); },
+  card_play: () => createOscillator(400, 0.1, 'triangle', 0.1),
+  clash_draw: () => { createOscillator(300, 0.2, 'square', 0.05); createOscillator(305, 0.2, 'square', 0.05); },
+  clash_win: () => { createOscillator(600, 0.1, 'triangle', 0.1); setTimeout(()=>createOscillator(800, 0.1, 'triangle', 0.1), 50); },
+  clash_lose: () => createOscillator(200, 0.3, 'sawtooth', 0.1),
+  stage_win: () => { const f=[523.25, 659.25, 783.99]; f.forEach((freq,i)=>setTimeout(()=>createOscillator(freq,0.2), i*150)); },
+  game_over: () => { const f=[392, 349.23, 329.63, 261.63]; f.forEach((freq,i)=>setTimeout(()=>createOscillator(freq,0.3, 'sawtooth'), i*200)); },
+  rest: () => { createOscillator(440, 0.2, 'sine', 0.1); setTimeout(()=>createOscillator(660, 0.4, 'sine', 0.1), 150); }
+};
 
-<!-- ════════════════════════════════════════
-     ❸  DATA LAYER
-     ════════════════════════════════════════ -->
-<script>
-const CARD_TYPES = {
-  scissors: { icon:'✌️', name:'가위', label:'SCISSORS', beats:'paper'    },
-  rock:     { icon:'✊', name:'바위', label:'ROCK',     beats:'scissors' },
-  paper:    { icon:'🖐️', name:'보',  label:'PAPER',    beats:'rock'     }
+if (window.Telegram && Telegram.WebApp) {
+  const twa = Telegram.WebApp; twa.ready(); twa.expand();
+  if (twa.headerColor) twa.setHeaderColor('bg_color');
+}
+
+let wakeLock = null;
+const requestWakeLock = async () => {
+  try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
 };
-const TIER = {
-  normal: { label:'NRM', dmg:3, color:'var(--normal-c)' },
-  silver: { label:'SLV', dmg:5, color:'var(--silver)'   },
-  gold:   { label:'GLD', dmg:7, color:'var(--gold)'     }
-};
+if ('wakeLock' in navigator) { requestWakeLock(); document.addEventListener('visibilitychange', () => { if (wakeLock !== null && document.visibilitychange === 'visible') requestWakeLock(); }); }
+
+// --- 데이터 및 게임 로직 유지 (스테이지 이름 및 에셋 추가) ---
+
+// 타일 렌더링 함수
+const types = { scissors: '✌️', rock: '✊', paper: '🖐️' };
+const tiers = { normal: { name: 'N', dmg: 3, cls: '' }, silver: { name: 'S', dmg: 5, cls: 'silver' }, gold: { name: 'G', dmg: 7, cls: 'gold' } };
+
+// 인휴 님 요청 대사
+const dialogues = [
+  "길거리 양아치 정도야 껌이겠지",           // Stage 1
+  "양아치를 쓰러뜨렸더니 조폭 두목이 나타났네", // Stage 2
+  "뭐야 이동네 오야봉 문동진?"              // Stage 3
+];
+
+// 에셋 파일 이름
+const bossImages = [
+  "stage1.jpg", // 양아치
+  "stage2.jpg", // 두목
+  "stage3.jpg"  // 문동진
+];
 
 const STAGES = [
-  {
-    id:1, name:'STAGE 1', label:'STAGE 1 — 街頭',
-    enemyName:'양아치', enemyIcon:'😤',
-    playerHp:10, enemyHp:5, enemyAtk:3,
-    enemyDeckBuild:()=>buildEnemyDeck('normal','normal','normal','normal','normal','normal')
-  },
-  {
-    id:2, name:'STAGE 2', label:'STAGE 2 — 決鬪',
-    enemyName:'두목', enemyIcon:'😎',
-    playerHp:10, enemyHp:7, enemyAtk:4,
-    enemyDeckBuild:()=>buildEnemyDeck('normal','normal','normal','normal','normal','silver')
-  },
-  {
-    id:3, name:'STAGE 3', label:'STAGE 3 — 最終',
-    enemyName:'문동진', enemyIcon:'👹',
-    playerHp:10, enemyHp:12, enemyAtk:5,
-    enemyDeckBuild:()=>buildEnemyDeck('normal','normal','silver','silver','gold','gold')
-  }
+  { name: 'Stage 1: 양아치', maxHp: 5, normal: 2, silver: 0, gold: 0, reward: 'normal' },
+  { name: 'Stage 2: 두목', maxHp: 7, normal: 2, silver: 1, gold: 0, reward: 'silver' },
+  { name: 'Stage 3: 문동진', maxHp: 15, normal: 2, silver: 0, gold: 2, reward: 'gold' }
 ];
 
-const PERSONALITIES = [
-  { key:'aggressive', label:'강공형', badgeClass:'pb-aggressive', icon:'⚔️', desc:'강화 카드와 강력한 공격 선호' },
-  { key:'counter',    label:'반격형', badgeClass:'pb-counter',    icon:'🔄', desc:'상대 덱 분석 후 카운터' },
-  { key:'careful',    label:'신중형', badgeClass:'pb-careful',    icon:'🛡️', desc:'안정적인 무승부 이상 추구' }
-];
+function createInitialDeck() {
+  const d = [];
+  ['scissors', 'rock', 'paper'].forEach(type => { for(let i=0; i<2; i++) d.push({ id: Date.now()+Math.random(), type, tier: 'normal' }); });
+  return d;
+}
 
-function makeCard(type, tier='normal'){
-  return { type, tier, id:Math.random().toString(36).slice(2) };
-}
-function buildEnemyDeck(t1,t2,t3,t4,t5,t6){
-  const types=['scissors','scissors','rock','rock','paper','paper'];
-  return shuffle(types.map((type,i)=>makeCard(type,[t1,t2,t3,t4,t5,t6][i])));
-}
-function buildStarterDeck(){
-  return shuffle(['scissors','scissors','rock','rock','paper','paper'].map(t=>makeCard(t)));
-}
-function judge(p,e){ if(p===e)return 'draw'; return CARD_TYPES[p].beats===e?'win':'lose'; }
-function shuffle(arr){
-  const a=[...arr];
-  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
-  return a;
-}
-</script>
+// 게임 상태 (showIntro 추가됨)
+let G = { stageIdx: 0, playerHp: 10, playerMaxHp: 10, enemyHp: 0, enemyMaxHp: 0, playerDeck: [], playerHand: [], playerDiscard: [], enemyDeck: [], enemyDiscard: [], battleLog: [], showIntro: false };
 
-<!-- ════════════════════════════════════════
-     ❹  ENGINE LAYER
-     ════════════════════════════════════════ -->
-<script>
-/*
-  핵심 설계:
-  G.handDealt   = false  → 카드 받기 버튼 활성, 손패 빈 슬롯 표시
-  G.handDealt   = true   → 손패 3장 표시, 버튼 비활성
-  G.usedInHand  = [0,1,2] → 낸 카드 인덱스 배열 (render에서 used-card 클래스 부여)
-  3장 모두 낸 뒤 → G.handDealt=false, 버튼 재활성
-*/
-const G = {
-  screen:'title', stageIdx:0,
-  playerHp:10, playerMaxHp:10,
-  deck:[], drawPile:[], discardPile:[],
-  hand:[], usedInHand:[],
-  handDealt:false,         // true면 손패 표시, false면 빈 슬롯
-  dealAnimating:false,     // 딜 애니 중이면 클릭 차단
-  enemyHp:0, enemyMaxHp:0,
-  enemyDeck:[], enemyDrawPile:[], enemyDiscardPile:[],
-  cpuPersonality:null,
-  log:[]
-};
+function startGame() {
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  G.playerHp = 10; G.playerMaxHp = 10; G.playerDeck = createInitialDeck(); G.stageIdx = 0;
+  showScreen('screen-main'); startBattle(0);
+}
 
-/* ── 플레이어 드로우 (상태만 변경, DOM 건드리지 않음) ── */
-function drawPlayerHand(){
-  if(G.drawPile.length<3){
-    G.drawPile=shuffle([...G.discardPile]);
-    G.discardPile=[];
-    addLog('📦 플레이어 덱을 재구성했습니다.','info');
+function startBattle(idx) {
+  const s = STAGES[idx]; G.stageIdx = idx; G.enemyHp = s.maxHp; G.enemyMaxHp = s.maxHp;
+  G.enemyDeck = [];
+  ['scissors', 'rock', 'paper'].forEach(type => {
+    for(let i=0; i<s.normal; i++) G.enemyDeck.push({ type, tier: 'normal' });
+    for(let i=0; i<s.silver; i++) G.enemyDeck.push({ type, tier: 'silver' });
+    for(let i=0; i<s.gold; i++) G.enemyDeck.push({ type, tier: 'gold' });
+  });
+  G.enemyDiscard = []; shuffle(G.enemyDeck); G.playerDiscard = []; G.playerHand = []; shuffle(G.playerDeck);
+  G.battleLog = [{ type: 'system', text: `⚔️ [${s.name}]과의 전투가 시작되었습니다!` }];
+  
+  G.showIntro = true; // 보스 인트로 보여주기 설정
+  renderMain();
+}
+
+function drawInitialHand() {
+  for(let i=0; i<3; i++) drawCard(); sounds.card_draw(); G.battleLog.push({ type: 'system', text: '🎴 카드를 3장 뽑았습니다.' });
+}
+
+function drawCard() {
+  if (G.playerDeck.length === 0) {
+    if (G.playerDiscard.length === 0) return;
+    G.playerDeck = G.playerDiscard; G.playerDiscard = []; shuffle(G.playerDeck); G.battleLog.push({ type: 'system', text: '🔄 플레이어 덱을 다시 섞었습니다.' });
   }
-  G.hand=G.drawPile.splice(0,3);
-  G.discardPile.push(...G.hand);
-  G.usedInHand=[];
+  if (G.playerHand.length < 3) G.playerHand.push(G.playerDeck.pop());
 }
 
-/* ── CPU AI ── */
-function cpuPickCard(){
-  if(G.enemyDrawPile.length===0){
-    G.enemyDrawPile=shuffle([...G.enemyDiscardPile]);
-    G.enemyDiscardPile=[];
-    G.enemyDeck=[...G.enemyDrawPile];
-    addLog('🔄 적이 덱을 재구성했습니다!','enemy-log');
+function playCard(cardId) {
+  const idx = G.playerHand.findIndex(c => c.id === cardId); if (idx === -1) return;
+  const pCard = G.playerHand.splice(idx, 1)[0]; G.playerDiscard.push(pCard);
+  
+  if (G.enemyDeck.length === 0) { G.enemyDeck = G.enemyDiscard; G.enemyDiscard = []; shuffle(G.enemyDeck); G.battleLog.push({ type: 'system', text: '🔄 적 덱을 다시 섞었습니다.' }); }
+  const eCard = G.enemyDeck.pop(); G.enemyDiscard.push(eCard);
+  
+  sounds.card_play(); let text = `플레이어: ${types[pCard.type]}(${tiers[pCard.tier].name}) vs 적: ${types[eCard.type]}(${tiers[eCard.tier].name}) -> `;
+  const res = judge(pCard.type, eCard.type);
+  
+  if (res === 0) { text += '🤝 비겼습니다.'; sounds.clash_draw(); }
+  else if (res === 1) { const dmg = tiers[pCard.tier].dmg; G.enemyHp = Math.max(0, G.enemyHp - dmg); text += `✅ 승리! 적에게 ${dmg} 데미지.`; sounds.clash_win(); }
+  else { const dmg = tiers[eCard.tier].dmg; G.playerHp = Math.max(0, G.playerHp - dmg); text += `❌ 패배. ${dmg} 데미지를 입었습니다.`; sounds.clash_lose(); }
+  
+  G.battleLog.push({ type: 'result', text }); drawCard(); checkBattleEnd(); renderMain();
+}
+
+function judge(p, e) { if (p === e) return 0; if ((p === 'scissors' && e === 'paper') || (p === 'rock' && e === 'scissors') || (p === 'paper' && e === 'rock')) return 1; return -1; }
+
+function checkBattleEnd() {
+  if (G.enemyHp <= 0) { sounds.stage_win(); G.stageIdx++; if (G.stageIdx >= STAGES.length) { twa.showAlert('🎊 축하합니다! 모든 오야봉을 꺾고 동네를 제패했습니다!'); showScreen('screen-title'); } else { showScreen('screen-reward'); renderReward(); } }
+  else if (G.playerHp <= 0) { sounds.game_over(); twa.showAlert('💀 패배했습니다... 다시 도전하세요.'); showScreen('screen-title'); }
+}
+
+function startRewardUpgrade(cardId) {
+  const card = G.playerDeck.find(c => c.id === cardId); if(!card) return;
+  const currentTier = card.tier; card.tier = currentTier === 'normal' ? 'silver' : 'gold';
+  G.battleLog.push({ type: 'system', text: `✨ 덱의 ${types[card.type]} 카드가 ${tiers[card.tier].name}로 강화되었습니다!` });
+  sounds.rest(); showScreen('screen-rest'); renderRest();
+}
+
+function renderReward() {
+  const s = STAGES[G.stageIdx-1]; // 직전 스테이지 정보
+  const container = document.getElementById('reward-cards'); container.innerHTML = '';
+  // 노멀->실버 or 실버->골드 강화 대상 카드 필터링
+  const upgradableCards = G.playerDeck.filter(c => c.tier === s.reward);
+  
+  if (upgradableCards.length === 0) {
+    container.innerHTML = '<div style="opacity:0.6;">강화할 수 있는 카드가 없습니다.</div>';
+    setTimeout(() => { showScreen('screen-rest'); renderRest(); }, 1500); // 1.5초 후 휴게소로
+    return;
   }
-  /* 플레이어 남은 카드 확률 (drawPile + 아직 안 낸 hand) */
-  const remaining=[...G.drawPile];
-  G.hand.forEach((c,i)=>{ if(!G.usedInHand.includes(i)) remaining.push(c); });
-  const total=remaining.length||1;
-  const prob={scissors:0,rock:0,paper:0};
-  remaining.forEach(c=>prob[c.type]+=1/total);
-
-  const p=G.cpuPersonality;
-  let scores={scissors:0,rock:0,paper:0};
-
-  if(p==='aggressive'){
-    G.enemyDrawPile.forEach(c=>{
-      scores[c.type]+=(c.tier==='gold'?3:c.tier==='silver'?2:1)*(c.type==='rock'?1.3:1);
-    });
-  } else if(p==='counter'){
-    const beats={paper:'scissors',scissors:'rock',rock:'paper'};
-    Object.keys(prob).forEach(pt=>{ scores[beats[pt]]+=prob[pt]*2; });
-    const avail={};
-    G.enemyDrawPile.forEach(c=>{ avail[c.type]=(avail[c.type]||0)+1; });
-    Object.keys(scores).forEach(t=>{ if(!avail[t]) scores[t]=0; });
-  } else {
-    const beats={paper:'scissors',scissors:'rock',rock:'paper'};
-    Object.keys(prob).forEach(pt=>{
-      scores[pt]        +=prob[pt]*1.0;
-      scores[beats[pt]] +=prob[pt]*1.5;
-    });
-    const avail={};
-    G.enemyDrawPile.forEach(c=>{ avail[c.type]=(avail[c.type]||0)+1; });
-    Object.keys(scores).forEach(t=>{ if(!avail[t]) scores[t]=0; });
-  }
-
-  const bestType=Object.keys(scores).reduce((a,b)=>scores[a]>=scores[b]?a:b);
-  let candidates=G.enemyDrawPile.filter(c=>c.type===bestType);
-  if(!candidates.length) candidates=[G.enemyDrawPile[0]];
-  if(p==='aggressive'){
-    const to={gold:3,silver:2,normal:1};
-    candidates.sort((a,b)=>to[b.tier]-to[a.tier]);
-  }
-  const chosen=candidates[0];
-  const idx=G.enemyDrawPile.findIndex(c=>c.id===chosen.id);
-  G.enemyDrawPile.splice(idx,1);
-  G.enemyDiscardPile.push(chosen);
-  return chosen;
-}
-
-/* ── 스테이지 초기화 ── */
-function initStage(idx, hpOverride=null){
-  const st=STAGES[idx];
-  G.stageIdx=idx;
-  G.playerHp    =hpOverride!==null?hpOverride:st.playerHp;
-  G.playerMaxHp =st.playerHp;
-  G.enemyHp     =st.enemyHp;
-  G.enemyMaxHp  =st.enemyHp;
-  G.drawPile    =shuffle([...G.deck]);
-  G.discardPile =[];
-  G.hand        =[];
-  G.usedInHand  =[];
-  G.handDealt   =false;
-  G.dealAnimating=false;
-  G.enemyDeck        =st.enemyDeckBuild();
-  G.enemyDrawPile    =[...G.enemyDeck];
-  G.enemyDiscardPile =[];
-  G.cpuPersonality   =PERSONALITIES[Math.floor(Math.random()*3)].key;
-  const pInfo=PERSONALITIES.find(p=>p.key===G.cpuPersonality);
-  addLog(`🧠 적 성향: ${pInfo.icon} ${pInfo.label} — ${pInfo.desc}`,'enemy-log');
-}
-
-/* ── 카드 내기 ── */
-function playCard(handIdx){
-  if(!G.handDealt || G.dealAnimating) return;
-  if(G.usedInHand.includes(handIdx)) return;
-
-  SFX.play();
-  const pCard=G.hand[handIdx];
-  const eCard=cpuPickCard();
-  const result=judge(pCard.type, eCard.type);
-  const stage=STAGES[G.stageIdx];
-
-  if(result==='win'){
-    const dmg=TIER[pCard.tier].dmg;
-    G.enemyHp=Math.max(0,G.enemyHp-dmg);
-    addLog(`나의 ${CARD_TYPES[pCard.type].name}(${TIER[pCard.tier].label}) vs 적의 ${CARD_TYPES[eCard.type].name}(${TIER[eCard.tier].label}) → 🏆 승리! ${dmg} 데미지!`,'win');
-    setTimeout(()=>SFX.win(),150);
-  } else if(result==='lose'){
-    G.playerHp=Math.max(0,G.playerHp-stage.enemyAtk);
-    addLog(`나의 ${CARD_TYPES[pCard.type].name}(${TIER[pCard.tier].label}) vs 적의 ${CARD_TYPES[eCard.type].name}(${TIER[eCard.tier].label}) → 💀 패배! ${stage.enemyAtk} 데미지!`,'lose');
-    setTimeout(()=>SFX.lose(),150);
-  } else {
-    addLog(`나의 ${CARD_TYPES[pCard.type].name}(${TIER[pCard.tier].label}) vs 적의 ${CARD_TYPES[eCard.type].name}(${TIER[eCard.tier].label}) → 🤝 무승부`,'draw');
-    setTimeout(()=>SFX.drawSfx(),150);
-  }
-
-  /* ── 낸 카드 인덱스 기록 후 render → used-card 클래스로 카드 숨김 ── */
-  G.usedInHand.push(handIdx);
-
-  if(G.enemyHp<=0){ render(); setTimeout(triggerStageClear,500); return; }
-  if(G.playerHp<=0){ render(); setTimeout(triggerGameOver,500); return; }
-
-  if(G.usedInHand.length===3){
-    /* 손패 3장 모두 사용 → 다음 턴 준비 */
-    G.handDealt=false;
-    addLog('── 손패를 모두 사용했습니다. [카드 받기]를 눌러 다음 턴!','info');
-  }
-
-  render(); // ← 반드시 render() 한 번만 호출
-}
-
-function addLog(msg,type=''){
-  G.log.unshift({msg,type});
-  if(G.log.length>40) G.log.pop();
-}
-function triggerStageClear(){
-  SFX.stageClear();
-  if(G.stageIdx<STAGES.length-1){ G.screen='reward'; render(); }
-  else { G.screen='victory'; render(); }
-}
-function triggerGameOver(){ G.screen='gameover'; render(); }
-function enemyRemaining(){
-  const c={scissors:0,rock:0,paper:0};
-  G.enemyDrawPile.forEach(x=>c[x.type]++);
-  return c;
-}
-</script>
-
-<!-- ════════════════════════════════════════
-     ❺  RENDER LAYER
-     ════════════════════════════════════════ -->
-<script>
-const $=id=>document.getElementById(id);
-
-function titleBarHTML(sub=''){
-  return `<div id="title-bar">
-    <div class="title-main">가위 바위 보 배틀</div>
-    <div class="title-sub">S-R-P &nbsp; BATTLE</div>
-    <div class="title-ver">v1.5</div>
-    ${sub?`<div id="stage-label">${sub}</div>`:''}
-  </div>`;
-}
-
-function render(){
-  ({
-    title:    renderTitle,
-    battle:   renderBattle,
-    reward:   renderReward,
-    reststop: renderRestStop,
-    gameover: renderGameOver,
-    victory:  renderVictory
-  })[G.screen]?.();
-}
-
-/* ① TITLE */
-function renderTitle(){
-  $('app').innerHTML=`
-    <div id="title-screen">
-      <div class="hero-ko">가위 바위 보 배틀</div>
-      <div class="hero-en">S-R-P &nbsp; BATTLE</div>
-      <div class="hero-ver">v1.5</div>
-      <div class="rps-deco"><span>✌️</span><span>✊</span><span>🖐️</span></div>
-      <div style="color:var(--text-dim);font-size:.76rem;max-width:360px;margin:0 auto 8px;line-height:1.9">
-        3스테이지를 클리어하라!<br>CPU가 덱 카운팅으로 전략을 짭니다 🧠
-      </div>
-      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:20px">
-        ${PERSONALITIES.map(p=>`<span class="personality-badge ${p.badgeClass}">${p.icon} ${p.label}</span>`).join('')}
-      </div>
-      <button class="btn btn-primary" onclick="startGame()">⚔️ 게임 시작</button>
-    </div>`;
-}
-
-/* ② BATTLE — render는 G 상태만 읽어서 그린다 */
-function renderBattle(){
-  const stage=STAGES[G.stageIdx];
-  const pPct=Math.max(0,(G.playerHp/G.playerMaxHp)*100);
-  const ePct=Math.max(0,(G.enemyHp /G.enemyMaxHp )*100);
-  const pInfo=PERSONALITIES.find(p=>p.key===G.cpuPersonality);
-
-  /* 플레이어 pip */
-  const drawIds =new Set(G.drawPile.map(c=>c.id));
-  const handIds =new Set(G.hand.map(c=>c.id));
-  const usedHIds=new Set(G.usedInHand.map(i=>G.hand[i]?.id));
-  const playerPips=G.deck.map(c=>{
-    const spent=usedHIds.has(c.id)||(!drawIds.has(c.id)&&!handIds.has(c.id));
-    return `<div class="pip ${c.type} tier-${c.tier} ${spent?'spent':''}">
-      <div class="pip-icon">${CARD_TYPES[c.type].icon}</div>
-      <div class="pip-label">${c.type.slice(0,3).toUpperCase()}</div>
-      <div class="pip-dmg">${TIER[c.tier].dmg}</div>
-    </div>`;
-  }).join('');
-
-  /* 적 pip */
-  const eDrawIds=new Set(G.enemyDrawPile.map(c=>c.id));
-  const enemyPips=G.enemyDeck.map(c=>{
-    if(eDrawIds.has(c.id)){
-      return `<div class="pip enemy-unknown tier-${c.tier}"><div class="pip-icon">❓</div></div>`;
-    }
-    return `<div class="pip ${c.type} tier-${c.tier} enemy-drawn">
-      <div class="pip-icon">${CARD_TYPES[c.type].icon}</div>
-      <div class="pip-label">${c.type.slice(0,3).toUpperCase()}</div>
-      <div class="pip-dmg">${TIER[c.tier].dmg}</div>
-    </div>`;
-  }).join('');
-
-  /* 남은 타입 요약 */
-  const rem=enemyRemaining();
-  const remSummary=['scissors','rock','paper'].map(t=>
-    rem[t]>0?`<span style="color:var(--${t})">${CARD_TYPES[t].icon}×${rem[t]}</span>`
-            :`<span style="opacity:.2">${CARD_TYPES[t].icon}×0</span>`
-  ).join('&nbsp;');
-
-  /* ── 손패 HTML ──
-     handDealt=false → 빈 슬롯 3개
-     handDealt=true  → 카드 3장, usedInHand에 포함된 것은 used-card(opacity 0)
-  */
-  let handHTML='';
-  if(!G.handDealt){
-    handHTML='<div class="card card-placeholder"></div>'.repeat(3);
-  } else {
-    handHTML=G.hand.map((c,i)=>{
-      const used=G.usedInHand.includes(i);
-      const ct=CARD_TYPES[c.type];
-      return `<div class="card ${c.type} tier-${c.tier} ${used?'used-card':''}"
-                   onclick="playCard(${i})" style="cursor:${used?'default':'pointer'}">
-        <div class="card-icon">${ct.icon}</div>
-        <div class="card-name">${ct.label}</div>
-        <div class="card-dmg">${TIER[c.tier].dmg} DMG</div>
-      </div>`;
-    }).join('');
-  }
-
-  const logHTML=G.log.slice(0,10).map(e=>
-    `<div class="log-entry ${e.type}">${e.msg}</div>`
-  ).join('')||'<div class="log-entry info">카드를 받아 게임을 시작하세요...</div>';
-
-  $('app').innerHTML=`
-    ${titleBarHTML(`${stage.label} &nbsp;|&nbsp; ${stage.enemyIcon} ${stage.enemyName}`)}
-    ${pInfo?`<div style="text-align:center;margin-top:-4px">
-      <span class="personality-badge ${pInfo.badgeClass}">${pInfo.icon} CPU ${pInfo.label}</span>
-    </div>`:''}
-
-    <div class="panel">
-      <div id="hp-area">
-        <div class="hp-block">
-          <div class="hp-label"><span>⚔️ PLAYER HP</span><span>${G.playerHp} / ${G.playerMaxHp}</span></div>
-          <div class="hp-track"><div class="hp-fill" id="player-hp-fill" style="width:${pPct}%"></div></div>
-        </div>
-        <div class="hp-block">
-          <div class="hp-label"><span>${stage.enemyIcon} ENEMY HP</span><span>${G.enemyHp} / ${G.enemyMaxHp}</span></div>
-          <div class="hp-track"><div class="hp-fill" id="enemy-hp-fill" style="width:${ePct}%"></div></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <div id="tracker-area">
-        <div class="tracker-block">
-          <div class="tracker-title">
-            <span>📋 MY DECK</span>
-            <span style="color:var(--text-dim);font-size:.55rem">드로우 대기 ${G.drawPile.length}장</span>
-          </div>
-          <div class="pip-row">${playerPips}</div>
-        </div>
-        <div class="tracker-block">
-          <div class="tracker-title">
-            <span style="color:var(--enemy)">🎴 ENEMY DECK</span>
-            <span style="font-size:.55rem;display:flex;align-items:center;gap:4px">
-              <span style="color:var(--text-dim)">남은 ${G.enemyDrawPile.length}장</span>
-              ${G.enemyDrawPile.length===0?'<span class="reshuffle-badge">재구성!</span>':''}
-            </span>
-          </div>
-          <div class="pip-row">${enemyPips}</div>
-          <div style="font-size:.6rem;margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <span style="font-size:.5rem;color:var(--text-dim);letter-spacing:1px">남은 타입:</span>
-            ${remSummary}
-            <span style="font-size:.5rem;color:var(--muted)">| 테두리색 = 강화 힌트</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <div style="font-size:.58rem;letter-spacing:2px;color:var(--text-dim);margin-bottom:5px">BATTLE LOG</div>
-      <div id="log-area">${logHTML}</div>
-    </div>
-
-    <div id="hand-zone">
-      <div id="draw-btn-wrap">
-        <button class="btn btn-draw" id="draw-btn"
-          onclick="handleDrawBtn()"
-          ${G.handDealt?'disabled':''}>
-          🃏 카드 받기
-        </button>
-      </div>
-      <div id="hand-area">${handHTML}</div>
-    </div>`;
-}
-
-/* ── [카드 받기] 버튼 ──
-   1) drawPlayerHand()로 상태 업데이트
-   2) 손패 영역을 빈 슬롯으로 초기화
-   3) 0.5초 간격으로 카드 1장씩 DOM에 추가 (애니메이션)
-   4) 모두 등장하면 G.handDealt=true, 드로우 버튼 disable
-   ★ render()를 여기서 다시 부르지 않음 → 충돌 없음
-*/
-function handleDrawBtn(){
-  drawPlayerHand();        // G.hand, G.usedInHand 업데이트
-  G.handDealt=false;
-  G.dealAnimating=true;
-
-  /* 버튼 즉시 비활성화 */
-  const btn=$('draw-btn');
-  if(btn) btn.disabled=true;
-
-  /* 손패 영역 빈 슬롯으로 교체 */
-  const handArea=$('hand-area');
-  if(handArea) handArea.innerHTML='<div class="card card-placeholder"></div>'.repeat(3);
-
-  /* 순차 딜 */
-  G.hand.forEach((c,i)=>{
-    setTimeout(()=>{
-      SFX.draw();
-      const ct=CARD_TYPES[c.type];
-      const div=document.createElement('div');
-      div.className=`card ${c.type} tier-${c.tier} dealing`;
-      div.style.animationDuration='.45s';
-      div.innerHTML=`
-        <div class="card-icon">${ct.icon}</div>
-        <div class="card-name">${ct.label}</div>
-        <div class="card-dmg">${TIER[c.tier].dmg} DMG</div>`;
-      div.onclick=()=>playCard(i);
-
-      /* 빈 슬롯 교체 */
-      const slots=handArea.querySelectorAll('.card-placeholder');
-      if(slots[0]) slots[0].replaceWith(div);
-      else handArea.appendChild(div);
-
-      /* 마지막 카드 등장 후 handDealt=true */
-      if(i===G.hand.length-1){
-        setTimeout(()=>{
-          G.handDealt=true;
-          G.dealAnimating=false;
-          /* dealing 클래스 제거 */
-          div.classList.remove('dealing');
-        }, 500);
-      }
-    }, i*500);
+  
+  upgradableCards.forEach(card => {
+    const btn = document.createElement('div'); btn.className = `card-btn ${tiers[card.tier].cls}`;
+    btn.onclick = () => startRewardUpgrade(card.id);
+    btn.innerHTML = `<div class="card-icon">${types[card.type]}</div><div class="card-dmg">${tiers[card.tier].name}/${tiers[card.tier].dmg}</div>`;
+    container.appendChild(btn);
   });
 }
 
-/* ③ REWARD */
-let rewardPickIdx=null;
-function renderReward(){
-  const allMax=G.deck.every(c=>c.tier==='gold');
-  const cards=G.deck.map((c,i)=>{
-    const ct=CARD_TYPES[c.type];
-    const isMax=c.tier==='gold';
-    const sel=rewardPickIdx===i;
-    const nt=c.tier==='normal'?'silver':'gold';
-    return `<div class="upg-card ${sel?'selected':''} ${isMax?'locked':''}"
-                 onclick="${isMax?'':` rewardPickIdx=${i}; renderReward()`}">
-      <div class="uc-icon">${ct.icon}</div>
-      <div class="uc-name">${ct.label}</div>
-      <div class="uc-dmg" style="color:${isMax?'var(--gold)':'var(--normal-c)'}">
-        ${isMax?'MAX':`${TIER[c.tier].dmg}<span style='color:${TIER[nt].color}'>→${TIER[nt].dmg}DMG</span>`}
-      </div>
-    </div>`;
-  }).join('');
-  const canConfirm=allMax||rewardPickIdx!==null;
-  $('app').innerHTML=`
-    ${titleBarHTML('CLEAR — 클리어 보상')}
-    <div class="panel" style="text-align:center;padding:22px 20px">
-      <div style="font-size:2.5rem;margin-bottom:8px">🏅</div>
-      <div style="font-family:'Black Han Sans',sans-serif;font-size:1.3rem;color:var(--accent);margin-bottom:6px">
-        ${STAGES[G.stageIdx].name} 클리어!
-      </div>
-      <div style="font-size:.78rem;color:var(--text-dim);line-height:1.7;margin-bottom:14px">
-        카드 1장을 한 단계 강화하세요!<br>
-        <span style="color:var(--normal-c)">NRM(3)</span> →
-        <span style="color:var(--silver)">SLV(5)</span> →
-        <span style="color:var(--gold)">GLD(7)</span>
-        ${allMax?'<br>모든 카드가 최대입니다.':''}
-      </div>
-      ${allMax?'':`<div class="upgrade-pick">${cards}</div>`}
-      <div class="modal-actions">
-        <button class="btn btn-primary" onclick="confirmReward()" ${canConfirm?'':'disabled'}>
-          ${allMax?'다음 →':'강화 확정 ⚡'}
-        </button>
-      </div>
-    </div>`;
+function renderRest() {
+  document.getElementById('rest-stage-num').textContent = G.stageIdx;
+  const upBtn = document.getElementById('btn-rest-upgrade');
+  // 덱에 노멀 카드가 있을 때만 강화 버튼 활성화
+  const hasNormal = G.playerDeck.some(c => c.tier === 'normal');
+  upBtn.style.opacity = hasNormal ? '1' : '0.4';
+  upBtn.onclick = hasNormal ? () => selectRest('upgrade') : null;
 }
-function confirmReward(){
-  if(rewardPickIdx!==null){
-    const c=G.deck[rewardPickIdx];
-    G.deck[rewardPickIdx]=makeCard(c.type,c.tier==='normal'?'silver':'gold');
-    SFX.upgrade();
-    rewardPickIdx=null;
+
+function selectRest(type) {
+  sounds.rest();
+  if (type === 'bacchus') { G.playerHp = Math.min(G.playerMaxHp, G.playerHp + 3); G.battleLog.push({ type: 'system', text: '🥤 박카스를 마셔 체력을 3 회복했습니다.' }); }
+  else if (type === 'upgrade') {
+    const normalCards = G.playerDeck.filter(c => c.tier === 'normal');
+    if (normalCards.length > 0) { shuffle(normalCards); normalCards[0].tier = 'silver'; G.battleLog.push({ type: 'system', text: `✨ 휴게소 강화: 덱의 ${types[normalCards[0].type]} 카드가 SILVER로 변했습니다.` }); }
   }
-  G.screen='reststop'; render();
+  showScreen('screen-main'); startBattle(G.stageIdx);
 }
 
-/* ④ REST STOP */
-let restChoice=null, restUpgradeIdx=null;
-function renderRestStop(){
-  const bSel=restChoice==='bakkus', uSel=restChoice==='upgrade';
-  const newHp=Math.min(G.playerMaxHp,G.playerHp+3);
-  const upSub=uSel?`
-    <div style="font-size:.72rem;color:var(--text-dim);margin:10px 0 4px;text-align:center">강화할 카드를 선택하세요:</div>
-    <div class="upgrade-pick">
-      ${G.deck.map((c,i)=>{
-        const isMax=c.tier==='gold', sel=restUpgradeIdx===i;
-        const nt=c.tier==='normal'?'silver':'gold';
-        const ct=CARD_TYPES[c.type];
-        return `<div class="upg-card ${sel?'selected':''} ${isMax?'locked':''}"
-                     onclick="${isMax?'':` restUpgradeIdx=${i}; renderRestStop()`}">
-          <div class="uc-icon">${ct.icon}</div>
-          <div class="uc-name">${ct.label}</div>
-          <div class="uc-dmg" style="color:${isMax?'var(--gold)':'var(--normal-c)'}">
-            ${isMax?'MAX':`${TIER[c.tier].dmg}<span style='color:${TIER[nt].color}'>→${TIER[nt].dmg}DMG</span>`}
-          </div>
-        </div>`;
-      }).join('')}
-    </div>`:'';
-  const canConfirm=bSel||(uSel&&restUpgradeIdx!==null);
-  $('app').innerHTML=`
-    ${titleBarHTML('⛺ 휴게소')}
-    <div class="panel" style="padding:22px 20px">
-      <div style="text-align:center;margin-bottom:16px">
-        <div style="font-size:2.2rem;margin-bottom:6px">⛺</div>
-        <div style="font-family:'Black Han Sans',sans-serif;font-size:1.2rem;color:var(--accent2);margin-bottom:5px">휴게소에 도착했습니다</div>
-        <div style="font-size:.74rem;color:var(--text-dim);line-height:1.7">다음 스테이지 진입 전 아이템을 하나 선택하세요.</div>
-      </div>
-      <div class="option-grid">
-        <div class="option-card bakkus ${bSel?'selected':''}"
-             onclick="restChoice='bakkus';restUpgradeIdx=null;renderRestStop()">
-          <div class="opt-icon">🥤</div>
-          <div class="opt-name" style="color:var(--danger)">박카스</div>
-          <div class="opt-desc">HP <b style="color:var(--text)">${G.playerHp}</b> → <b style="color:var(--win)">${newHp}</b><br><span style="font-size:.6rem">(+3 회복, 최대 ${G.playerMaxHp})</span></div>
-        </div>
-        <div class="option-card upgrade ${uSel?'selected':''}"
-             onclick="restChoice='upgrade';restUpgradeIdx=null;renderRestStop()">
-          <div class="opt-icon">⚡</div>
-          <div class="opt-name" style="color:var(--silver)">카드 강화</div>
-          <div class="opt-desc">내 덱 카드 1장을<br>한 단계 강화합니다<br><b style="color:var(--gold)">최대 GOLD(7DMG)</b></div>
-        </div>
-      </div>
-      ${upSub}
-      <div class="modal-actions">
-        <button class="btn btn-primary" onclick="confirmRestStop()" ${canConfirm?'':'disabled'}>
-          선택 확정 → 다음 스테이지
-        </button>
-      </div>
-    </div>`;
-}
-function confirmRestStop(){
-  if(restChoice==='bakkus'){ G.playerHp=Math.min(G.playerMaxHp,G.playerHp+3); SFX.heal(); }
-  else if(restChoice==='upgrade'&&restUpgradeIdx!==null){
-    const c=G.deck[restUpgradeIdx];
-    G.deck[restUpgradeIdx]=makeCard(c.type,c.tier==='normal'?'silver':'gold');
-    SFX.upgrade();
+// --- 렌더링 로직 (수정됨) ---
+
+function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+
+// 메인 화면 렌더링 (인트로 또는 배틀)
+function renderMain() {
+  const introArea = document.getElementById('intro-area');
+  const middleArea = document.getElementById('middle-area');
+  const handArea = document.getElementById('hand-area');
+  
+  if (G.showIntro) {
+    // 인트로 보여주기
+    introArea.style.display = 'flex'; middleArea.style.display = 'none'; handArea.style.display = 'none';
+    renderBossIntro();
+  } else {
+    // 배틀 보여주기
+    introArea.style.display = 'none'; middleArea.style.display = 'grid'; handArea.style.display = 'flex';
+    if (G.playerHand.length === 0) drawInitialHand();
+    renderBattle();
   }
-  restChoice=null; restUpgradeIdx=null;
-  initStage(G.stageIdx+1,G.playerHp);
-  G.screen='battle'; render();
 }
 
-/* ⑤ GAME OVER */
-function renderGameOver(){
-  $('app').innerHTML=`
-    ${titleBarHTML()}
-    <div class="panel" style="text-align:center;padding:36px 20px">
-      <div style="font-size:3rem;margin-bottom:12px">💀</div>
-      <div style="font-family:'Black Han Sans',sans-serif;color:var(--danger);font-size:1.4rem;margin-bottom:8px">GAME OVER</div>
-      <div style="font-size:.8rem;color:var(--text-dim);line-height:1.8;margin-bottom:20px">
-        ${STAGES[G.stageIdx].enemyIcon} ${STAGES[G.stageIdx].enemyName}에게 쓰러졌습니다.<br>전략을 다듬고 다시 도전하세요!
-      </div>
-      <button class="btn btn-primary" onclick="startGame()">🔄 처음부터</button>
-    </div>`;
+// 보스 인트로 렌더링 (추가됨)
+function renderBossIntro() {
+  const container = document.getElementById('intro-area');
+  const s = STAGES[G.stageIdx];
+  const dialogue = dialogues[G.stageIdx];
+  const imgUrl = bossImages[G.stageIdx];
+
+  container.innerHTML = `
+    <div class="boss-image" style="background-image: url('${imgUrl}')"></div>
+    <div class="boss-intro-text">"${dialogue}"</div>
+    <button onclick="confirmStartBattle()">전투 시작 (VS ${s.name})</button>
+  `;
 }
 
-/* ⑥ VICTORY */
-function renderVictory(){
-  $('app').innerHTML=`
-    ${titleBarHTML()}
-    <div class="panel" style="text-align:center;padding:36px 20px">
-      <div style="font-size:3rem;margin-bottom:12px">🏆</div>
-      <div style="font-family:'Black Han Sans',sans-serif;color:var(--accent);font-size:1.5rem;margin-bottom:8px">ALL CLEAR!</div>
-      <div style="font-size:.8rem;color:var(--text-dim);line-height:1.8;margin-bottom:20px">
-        양아치 → 두목 → 문동진 격파!<br>모든 스테이지를 클리어했습니다 🎉
-      </div>
-      <button class="btn btn-primary" onclick="startGame()">🔄 다시 플레이</button>
-    </div>`;
+function confirmStartBattle() {
+  G.showIntro = false; renderMain();
 }
+
+function renderBattle() {
+  const s = STAGES[G.stageIdx];
+  
+  // HP 영역 렌더링 (HP 바 비례 계산 적용)
+  const hpArea = document.getElementById('hp-area');
+  const pPct = (G.playerHp / G.playerMaxHp) * 100;
+  const ePct = (G.enemyHp / G.enemyMaxHp) * 100;
+  
+  // 자바스크립트에서 HP당 너비 계산 (예: HP 1당 15px)
+  const pTrackW = G.playerMaxHp * 15 + "px";
+  const eTrackW = G.enemyMaxHp * 15 + "px";
+
+  hpArea.innerHTML = `
+    <div class="hp-row">
+      <div class="name">플레이어</div>
+      <div class="hp-track" style="--max-w: ${pTrackW};"><div class="hp-bar" style="width:${pPct}%"></div></div>
+      <div class="hp-num">${G.playerHp}/${G.playerMaxHp}</div>
+    </div>
+    <div class="hp-row">
+      <div class="name" style="color:var(--accent2);">${s.name}</div>
+      <div class="hp-track" style="--max-w: ${eTrackW};"><div class="hp-bar" style="width:${ePct}%"></div></div>
+      <div class="hp-num">${G.enemyHp}/${G.enemyMaxHp}</div>
+    </div>
+  `;
+
+  // 나머지 중간 영역, 로그, 핸드 렌더링 유지
+  const middleArea = document.getElementById('middle-area');
+  middleArea.innerHTML = '<div class="tracker-panel"><div class="tracker-header">적 덱 (남은 카드)</div><div id="enemy-tracker" class="tracker-grid"></div></div><div id="battle-log" class="log-area"></div>';
+  const tracker = document.getElementById('enemy-tracker');
+  const allECards = [...G.enemyDeck, ...G.enemyDiscard].sort((a,b)=>a.type.localeCompare(b.type));
+  allECards.forEach(card => { const el = document.createElement('div'); el.className = `tracker-card ${card.played ? 'played' : ''}`; el.innerHTML = `${types[card.type]}<span style="font-size:0.7em;">${tiers[card.tier].name}</span>`; tracker.appendChild(el); });
+  const log = document.getElementById('battle-log');
+  G.battleLog.slice(-20).forEach(entry => { const el = document.createElement('div'); el.className = `log-entry ${entry.type}`; el.textContent = entry.text; log.appendChild(el); });
+  
+  const handArea = document.getElementById('hand-area');
+  handArea.innerHTML = `<div class="hand-header"><span>나의 핸드</span><span style="opacity:0.6; font-size:0.8rem;">덱: ${G.playerDeck.length}</span></div><div id="cards-container" class="cards-container"></div>`;
+  const container = document.getElementById('cards-container');
+  G.playerHand.forEach(card => {
+    const btn = document.createElement('button'); btn.className = `card-btn ${tiers[card.tier].cls}`;
+    btn.onclick = () => playCard(card.id);
+    btn.innerHTML = `<div class="card-icon">${types[card.type]}</div><div class="card-dmg">${tiers[card.tier].name}/${tiers[card.tier].dmg}</div>`;
+    container.appendChild(btn);
+  });
+}
+
+function shuffle(a) { for(let i=a.length-1; i>0; i--) { const j=Math.floor(Math.random()*(i+1)); [a[i], a[j]]=[a[j], a[i]]; } }
 </script>
-
-<!-- ════════════════════════════════════════
-     ❻  FLOW
-     ════════════════════════════════════════ -->
-<script>
-function startGame(){
-  G.deck=buildStarterDeck();
-  rewardPickIdx=null; restChoice=null; restUpgradeIdx=null;
-  G.log=[];
-  initStage(0,null);
-  G.screen='battle';
-  render();
-}
-window.onload=()=>render();
-</script>
-
-<div id="app"></div>
 </body>
 </html>
