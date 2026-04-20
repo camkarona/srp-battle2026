@@ -621,7 +621,8 @@ function shuffle(arr){
 const G = {
   screen:'title', stageIdx:0,
   logFolded: false,
-  enemyDeckOpen: false,   // 적 덱 pip 토글
+  enemyDeckOpen: false,
+  isGameOver: false,        // 게임오버/클리어 후 카드 클릭 차단
   playerHp:10, playerMaxHp:10,
   deck:[], drawPile:[], discardPile:[],
   hand:[], usedInHand:[],
@@ -728,6 +729,7 @@ function initStage(idx, hpOverride=null){
   G.usedInHand  = [];
   G.handDealt   = false;
   G.dealAnimating = false;
+  G.isGameOver  = false;
   
   G.enemyDrawPile    = [...G.enemyDeck];
   G.enemyDiscardPile = [];
@@ -742,7 +744,7 @@ function initStage(idx, hpOverride=null){
 /* ── 카드 내기 ── */
 /* ── 카드 내기 (시간차 대결 연출 적용 버전) ── */
 async function playCard(handIdx) {
-  if(!G.handDealt || G.dealAnimating) return;
+  if(G.isGameOver || !G.handDealt || G.dealAnimating) return;
   if(G.usedInHand.includes(handIdx)) return;
 
   const pCard = G.hand[handIdx];
@@ -827,11 +829,12 @@ function addLog(msg,type=''){
   if(G.log.length>40) G.log.pop();
 }
 function triggerStageClear(){
+  G.isGameOver = true;
   SFX.stageClear();
   if(G.stageIdx<STAGES.length-1){ G.screen='reward'; render(); }
   else { G.screen='victory'; render(); }
 }
-function triggerGameOver(){ G.screen='gameover'; render(); }
+function triggerGameOver(){ G.isGameOver = true; G.screen='gameover'; render(); }
 function enemyRemaining(){
   const c={scissors:0,rock:0,paper:0};
   G.enemyDrawPile.forEach(x=>c[x.type]++);
@@ -925,9 +928,9 @@ const enemyPips = allEnemyCards.map(c => {
     </div>`;
   }).join('');
 
+  /* 적 남은 패 요약: drawPile만 (실시간 — 낸 카드 제외) */
   const rem = {scissors:0, rock:0, paper:0};
-[...G.enemyDrawPile, ...G.enemyDiscardPile].forEach(c => rem[c.type]++);
-  
+  G.enemyDrawPile.forEach(c => rem[c.type]++);
   const remSummary = ['scissors','rock','paper'].map(t =>
     rem[t] > 0 ? `<span style="color:var(--${t})">${CARD_TYPES[t].icon}×${rem[t]}</span>`
                : `<span style="opacity:.2">${CARD_TYPES[t].icon}×0</span>`
@@ -995,7 +998,7 @@ const enemyPips = allEnemyCards.map(c => {
           <span style="font-size:1rem; display:flex; gap:8px; align-items:center;">
             ${remSummary}
           </span>
-          ${G.enemyDrawPile.length===0 ? '<span class="reshuffle-badge">재구성!</span>' : ''}
+          ${G.enemyDrawPile.length===0 ? '<span class="reshuffle-badge">재구성 대기!</span>' : `<span style="font-size:.7rem;color:var(--text-dim)">(${G.enemyDrawPile.length}장 남음)</span>`}
         </div>
         <!-- 토글 버튼 -->
         <button onclick="G.enemyDeckOpen=!G.enemyDeckOpen; render();"
@@ -1207,7 +1210,8 @@ function renderVictory(){
      ════════════════════════════════════════ -->
 <script>
 function startGame(){
-  BGM.play(); 
+  BGM.play();
+  G.isGameOver = false;
   G.deck = buildStarterDeck();
   rewardPickIdx = null; 
   restChoice = null; 
