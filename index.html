@@ -1160,7 +1160,7 @@ function renderRestStop(){
     </div>`;
 }
 function confirmRestStop(){
-  if(restChoice==='bakkus'){ G.playerHp += 3; SFX.heal(); }
+  if(restChoice==='bakkus'){ G.playerHp += 5; SFX.heal(); }
   else if(restChoice==='upgrade'&&restUpgradeIdx!==null){
     const c=G.deck[restUpgradeIdx];
     G.deck[restUpgradeIdx]=makeCard(c.type,c.tier==='normal'?'silver':'gold');
