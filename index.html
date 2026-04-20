@@ -2,8 +2,8 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>가위 바위 보 배틀 — S-R-P Battle v4.0</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>가위 바위 보 배틀 — S-R-P Battle v4.5</title>
 <style>
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
   
@@ -55,8 +55,8 @@ body::before {
 
 #app {
   position: relative; z-index: 1;
-  width: 100%; max-width: 720px;
-  padding: 0 14px 50px;
+  width: 100%; max-width: 480px;
+  padding: 0 10px 50px;
   display: flex; flex-direction: column; gap: 11px;
 }
 
@@ -215,7 +215,18 @@ body::before {
 /* ═══ HAND ZONE ═══ */
 #hand-zone  { display:flex; flex-direction:column; gap:9px; }
 #draw-btn-wrap { display:flex; justify-content:center; }
-#hand-area  { display:grid; grid-template-columns:repeat(3,1fr); gap:11px; min-height:160px; }
+/* 6장 오픈 핸드: 3열 2행 */
+#hand-area  { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; min-height:unset; }
+
+/* ─── 모바일 미디어 쿼리 ─── */
+@media (max-width: 400px) {
+  #hand-area { grid-template-columns: repeat(3,1fr); gap:5px; }
+  .card { padding: 10px 4px 8px; gap:5px; }
+  .card-icon { font-size: 1.6rem; }
+  .card-dmg  { font-size: 1rem; }
+  .pip { width:44px; height:58px; }
+  .pip .pip-icon { font-size:1.4rem; }
+}
 
 /* ─── HAND CARD ─── */
 .card {
@@ -380,12 +391,17 @@ background-size: contain;      /* cover 대신 contain으로 변경 */
 }
 #clash-overlay.active { display: flex; pointer-events: auto; }
 
-.clash-stage { display: flex; align-items: center; gap: 40px; position: relative; }
+.clash-stage { display: flex; align-items: center; gap: 20px; position: relative; flex-wrap: wrap; justify-content: center; }
 .clash-card {
-  width: 140px; height: 200px; background: var(--bg2);
+  width: 110px; height: 160px; background: var(--bg2);
   border: 3px solid var(--border); border-radius: 15px;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+@media (max-width: 400px) {
+  .clash-card { width: 85px; height: 125px; }
+  .clash-vs { font-size: 1.4rem !important; }
+  #clash-result-text { font-size: 1.1rem !important; margin-top: 20px !important; }
 }
 
 /* 카드 등장 애니메이션 */
@@ -526,14 +542,13 @@ function renderBossIntro() {
     </div>`;
 }
 
-// ❸-0 CPU 성향 (STAGES보다 먼저 선언 — initStage에서 참조하므로)
+// ❸ 스테이지 전체 구성
 const PERSONALITIES = [
   { key:'aggressive', label:'강공형', badgeClass:'pb-aggressive', icon:'⚔️', desc:'강화 카드와 강력한 공격 선호' },
   { key:'counter',    label:'반격형', badgeClass:'pb-counter',    icon:'🔄', desc:'상대 덱 분석 후 카운터' },
   { key:'careful',    label:'신중형', badgeClass:'pb-careful',    icon:'🛡️', desc:'안정적인 무승부 이상 추구' }
 ];
 
-// ❸ 스테이지 전체 구성 (오류 방지를 위해 4단계까지 모두 포함)
 const STAGES = [
   {
     id:1, name:'STAGE 1', label:'STAGE 1',
@@ -596,11 +611,11 @@ function shuffle(arr){
      ════════════════════════════════════════ -->
 <script>
 /*
-  핵심 설계:
+  v4.5 핵심 설계: 6덱 오픈 핸드
   G.handDealt   = false  → 카드 받기 버튼 활성, 손패 빈 슬롯 표시
-  G.handDealt   = true   → 손패 3장 표시, 버튼 비활성
-  G.usedInHand  = [0,1,2] → 낸 카드 인덱스 배열 (render에서 used-card 클래스 부여)
-  3장 모두 낸 뒤 → G.handDealt=false, 버튼 재활성
+  G.handDealt   = true   → 손패 6장 전체 표시, 버튼 비활성
+  G.usedInHand  = 낸 카드 인덱스 배열 (render에서 used-card 클래스 부여)
+  6장 모두 낸 뒤 → G.handDealt=false, 버튼 재활성 (새 6장 받기)
 */
 const G = {
   screen:'title', stageIdx:0,
@@ -616,19 +631,22 @@ const G = {
   log:[]
 };
 
-/* ── 플레이어 드로우 (상태만 변경, DOM 건드리지 않음) ── */
+/* ── 플레이어 드로우: 6장 전부 오픈 ── */
 function drawPlayerHand(){
-  if(G.drawPile.length<3){
-    G.drawPile=shuffle([...G.discardPile]);
-    G.discardPile=[];
-    addLog('📦 플레이어 덱을 재구성했습니다.','info');
+  // 남은 드로우가 6장 미만이면 discard 합쳐서 재구성
+  if(G.drawPile.length < 6){
+    G.drawPile = shuffle([...G.drawPile, ...G.discardPile]);
+    G.discardPile = [];
+    if(G.drawPile.length > 0) addLog('📦 덱을 재구성했습니다.','info');
   }
-  G.hand=G.drawPile.splice(0,3);
+  // 6장 전부 드로우
+  G.hand = G.drawPile.splice(0, 6);
   G.discardPile.push(...G.hand);
-  G.usedInHand=[];
+  G.usedInHand = [];
 }
 
-/* ── CPU AI ── */
+/* ── CPU AI (v4.5: 6장 오픈 핸드 대응) ──
+   플레이어 핸드가 오픈이므로 아직 안 낸 카드를 정확히 파악 */
 function cpuPickCard(){
   if(G.enemyDrawPile.length===0){
     G.enemyDrawPile=shuffle([...G.enemyDiscardPile]);
@@ -636,10 +654,9 @@ function cpuPickCard(){
     G.enemyDeck=[...G.enemyDrawPile];
     addLog('🔄 적이 덱을 재구성했습니다!','enemy-log');
   }
-  /* 플레이어 남은 카드 확률 (drawPile + 아직 안 낸 hand) */
-  const remaining=[...G.drawPile];
-  G.hand.forEach((c,i)=>{ if(!G.usedInHand.includes(i)) remaining.push(c); });
-  const total=remaining.length||1;
+  // 플레이어가 아직 안 낸 카드 (6장 오픈이므로 정확히 앎)
+  const remaining = G.hand.filter((_,i) => !G.usedInHand.includes(i));
+  const total = remaining.length || 1;
   const prob={scissors:0,rock:0,paper:0};
   remaining.forEach(c=>prob[c.type]+=1/total);
 
@@ -681,7 +698,7 @@ function cpuPickCard(){
   return chosen;
 }
 
-/* ── 스테이지 초기화 (v4.0 랜덤 보스 대응) ── */
+/* ── 스테이지 초기화 (v4.5 랜덤 보스 대응) ── */
 function initStage(idx, hpOverride=null){
   let st = STAGES[idx];
   G.stageIdx = idx;
@@ -797,7 +814,8 @@ addLog(detailMsg, 'info');
   G.usedInHand.push(handIdx);
   if(G.enemyHp<=0){ render(); setTimeout(triggerStageClear,500); return; }
   if(G.playerHp<=0){ render(); setTimeout(triggerGameOver,500); return; }
-  if(G.usedInHand.length===3) G.handDealt=false;
+  // 6장 모두 사용 → 다음 라운드 준비
+  if(G.usedInHand.length===6) G.handDealt=false;
   
   render();
 } // ← 반드시 render() 한 번만 호출
@@ -893,12 +911,12 @@ function renderBattle(){
 
   const pInfo = PERSONALITIES.find(p => p.key === G.cpuPersonality);
 
-  /* 플레이어/적 카드 추적(pip) 로직 (기존 유지) */
-  const drawIds = new Set(G.drawPile.map(c => c.id));
-  const handIds = new Set(G.hand.map(c => c.id));
+  /* 플레이어 pip: 6장 오픈 — 낸 것은 spent */
   const usedHIds = new Set(G.usedInHand.map(i => G.hand[i]?.id));
   const playerPips = G.deck.map(c => {
-    const spent = usedHIds.has(c.id) || (!drawIds.has(c.id) && !handIds.has(c.id));
+    // hand에 있고 usedInHand에 포함 → spent
+    const inHand = G.hand.find(h => h.id === c.id);
+    const spent = inHand ? G.usedInHand.includes(G.hand.indexOf(inHand)) : true;
     return `<div class="pip ${c.type} tier-${c.tier} ${spent ? 'spent' : ''}">
       <div class="pip-icon">${CARD_TYPES[c.type].icon}</div>
       <div class="pip-label">${c.type.slice(0,3).toUpperCase()}</div>
@@ -906,12 +924,11 @@ function renderBattle(){
     </div>`;
   }).join('');
 
+  /* 적 pip: v4.5 전면 공개 (❓ 없음) — 남은 카드는 밝게, 낸 카드는 흐리게 */
   const eDrawIds = new Set(G.enemyDrawPile.map(c => c.id));
   const enemyPips = G.enemyDeck.map(c => {
-    if(eDrawIds.has(c.id)){
-      return `<div class="pip enemy-unknown tier-${c.tier}"><div class="pip-icon">❓</div></div>`;
-    }
-    return `<div class="pip ${c.type} tier-${c.tier} enemy-drawn">
+    const isRemaining = eDrawIds.has(c.id);
+    return `<div class="pip ${c.type} tier-${c.tier} ${isRemaining ? '' : 'enemy-drawn'}">
       <div class="pip-icon">${CARD_TYPES[c.type].icon}</div>
       <div class="pip-label">${c.type.slice(0,3).toUpperCase()}</div>
       <div class="pip-dmg">${TIER[c.tier].dmg}</div>
@@ -924,10 +941,10 @@ function renderBattle(){
                : `<span style="opacity:.2">${CARD_TYPES[t].icon}×0</span>`
   ).join('&nbsp;');
 
-  /* 손패 렌더링 (기존 유지) */
+  /* 손패 렌더링: 6장 오픈 */
   let handHTML = '';
   if(!G.handDealt){
-    handHTML = '<div class="card card-placeholder"></div>'.repeat(3);
+    handHTML = '<div class="card card-placeholder"></div>'.repeat(6);
   } else {
     handHTML = G.hand.map((c, i) => {
       const used = G.usedInHand.includes(i);
@@ -981,7 +998,7 @@ function renderBattle(){
     <div class="panel">
       <div id="tracker-area">
         <div class="tracker-block">
-          <div class="tracker-title"><span>📋 MY DECK</span><span style="color:var(--text-dim);font-size:.55rem">드로우 대기 ${G.drawPile.length}장</span></div>
+          <div class="tracker-title"><span>📋 MY HAND</span><span style="color:var(--text-dim);font-size:.55rem">남은 ${G.hand.length - G.usedInHand.length}장</span></div>
           <div class="pip-row">${playerPips}</div>
         </div>
         <div class="tracker-block">
@@ -1005,54 +1022,45 @@ function renderBattle(){
 }
   
 /* ── [카드 받기] 버튼 ──
-   1) drawPlayerHand()로 상태 업데이트
-   2) 손패 영역을 빈 슬롯으로 초기화
-   3) 0.5초 간격으로 카드 1장씩 DOM에 추가 (애니메이션)
-   4) 모두 등장하면 G.handDealt=true, 드로우 버튼 disable
+   6장 오픈 핸드: 0.18초 간격으로 6장 순차 딜 애니메이션
    ★ render()를 여기서 다시 부르지 않음 → 충돌 없음
 */
 function handleDrawBtn(){
-  drawPlayerHand();        // G.hand, G.usedInHand 업데이트
+  drawPlayerHand();        // G.hand 6장 업데이트
   G.handDealt=false;
   G.dealAnimating=true;
 
-  /* 버튼 즉시 비활성화 */
   const btn=$('draw-btn');
   if(btn) btn.disabled=true;
 
-  /* 손패 영역 빈 슬롯으로 교체 */
   const handArea=$('hand-area');
-  if(handArea) handArea.innerHTML='<div class="card card-placeholder"></div>'.repeat(3);
+  if(handArea) handArea.innerHTML='<div class="card card-placeholder"></div>'.repeat(6);
 
-  /* 순차 딜 */
   G.hand.forEach((c,i)=>{
     setTimeout(()=>{
       SFX.draw();
       const ct=CARD_TYPES[c.type];
       const div=document.createElement('div');
       div.className=`card ${c.type} tier-${c.tier} dealing`;
-      div.style.animationDuration='.45s';
+      div.style.animationDuration='.38s';
       div.innerHTML=`
         <div class="card-icon">${ct.icon}</div>
         <div class="card-name">${ct.label}</div>
         <div class="card-dmg">${TIER[c.tier].dmg} DMG</div>`;
       div.onclick=()=>playCard(i);
 
-      /* 빈 슬롯 교체 */
       const slots=handArea.querySelectorAll('.card-placeholder');
       if(slots[0]) slots[0].replaceWith(div);
       else handArea.appendChild(div);
 
-      /* 마지막 카드 등장 후 handDealt=true */
       if(i===G.hand.length-1){
         setTimeout(()=>{
           G.handDealt=true;
           G.dealAnimating=false;
-          /* dealing 클래스 제거 */
           div.classList.remove('dealing');
-        }, 500);
+        }, 400);
       }
-    }, i*500);
+    }, i*180); // 0.18초 간격 (6장이라 더 빠르게)
   });
 }
 
