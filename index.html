@@ -526,6 +526,13 @@ function renderBossIntro() {
     </div>`;
 }
 
+// ❸-0 CPU 성향 (STAGES보다 먼저 선언 — initStage에서 참조하므로)
+const PERSONALITIES = [
+  { key:'aggressive', label:'강공형', badgeClass:'pb-aggressive', icon:'⚔️', desc:'강화 카드와 강력한 공격 선호' },
+  { key:'counter',    label:'반격형', badgeClass:'pb-counter',    icon:'🔄', desc:'상대 덱 분석 후 카운터' },
+  { key:'careful',    label:'신중형', badgeClass:'pb-careful',    icon:'🛡️', desc:'안정적인 무승부 이상 추구' }
+];
+
 // ❸ 스테이지 전체 구성 (오류 방지를 위해 4단계까지 모두 포함)
 const STAGES = [
   {
@@ -565,49 +572,6 @@ const STAGES = [
   }
 ];
 
-// ❹ 스테이지 초기화 함수 (initStage)
-function initStage(idx, hpOverride=null){
-  let st = STAGES[idx];
-  G.stageIdx = idx;
-  
-  if(st.isRandom) {
-    const picked = st.subBosses[Math.floor(Math.random() * st.subBosses.length)];
-    st.enemyName = picked.name;
-    st.enemyIcon = picked.icon;
-    st.enemyDeckBuild = () => {
-      return shuffle(picked.deck.map((t, i) => makeCard(t, i === 0 ? picked.tier : 'normal')));
-    };
-    G.currentBossKey = picked.key; 
-  } else {
-    G.currentBossKey = `stage${idx + 1}`;
-  }
-
-  G.playerHp    = hpOverride !== null ? hpOverride : st.playerHp;
-  G.playerMaxHp = st.playerHp;
-  G.enemyHp     = st.enemyHp;
-  G.enemyMaxHp  = st.enemyHp;
-  G.drawPile    = shuffle([...G.deck]);
-  G.discardPile = [];
-  G.hand        = [];
-  G.usedInHand  = [];
-  G.handDealt   = false;
-  G.dealAnimating = false;
-  
-  G.enemyDeck        = st.enemyDeckBuild();
-  G.enemyDrawPile    = [...G.enemyDeck];
-  G.enemyDiscardPile = [];
-  
-  G.cpuPersonality = st.fixedPersonality || PERSONALITIES[Math.floor(Math.random()*3)].key;
-  
-  const pInfo = PERSONALITIES.find(p=>p.key===G.cpuPersonality);
-  addLog(`🧠 ${st.enemyName} 등장! 성향: ${pInfo.label}`,'enemy-log');
-}
-  
-const PERSONALITIES = [
-  { key:'aggressive', label:'강공형', badgeClass:'pb-aggressive', icon:'⚔️', desc:'강화 카드와 강력한 공격 선호' },
-  { key:'counter',    label:'반격형', badgeClass:'pb-counter',    icon:'🔄', desc:'상대 덱 분석 후 카운터' },
-  { key:'careful',    label:'신중형', badgeClass:'pb-careful',    icon:'🛡️', desc:'안정적인 무승부 이상 추구' }
-];
 
 function makeCard(type, tier='normal'){
   return { type, tier, id:Math.random().toString(36).slice(2) };
@@ -717,7 +681,6 @@ function cpuPickCard(){
   return chosen;
 }
 
-/* ── 스테이지 초기화 ── */
 /* ── 스테이지 초기화 (v4.0 랜덤 보스 대응) ── */
 function initStage(idx, hpOverride=null){
   let st = STAGES[idx];
