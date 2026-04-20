@@ -502,15 +502,19 @@ const TIER = {
   gold:   { label:'골드', dmg:7, color:'var(--gold)'     }
 };
 // 보스별 이미지와 대사 데이터
-const BOSS_INTRO_DATA = [
-  { img: 'stage1.jpg', talk: "길거리 양아치 정도야 껌이겠지" },
-  { img: 'stage2.jpg', talk: "양아치를 쓰러뜨렸더니 조폭 두목이 나타났네" },
-  { img: 'stage3.jpg', talk: "뭐야 이동네 오야봉 문동진?" }
-];
+// 보스별 이미지와 대사 데이터 (원장님이 올리신 파일명으로 맞췄습니다)
+const BOSS_INTRO_DATA = {
+  "stage1":   { img: 'stage1.jpg', talk: "길거리 양아치 정도야 껌이겠지" },
+  "ssadagi":  { img: 'ssadagi.jpg', talk: "내 손바닥은 바람보다 빠르지. 보자기 맛 좀 볼래?" },
+  "dolmeori": { img: 'dolmeori.jpg', talk: "단단한 바위로 다 뭉개주마. 주먹이면 충분해!" },
+  "scissors": { img: 'scissorshand.jpg', talk: "싹둑싹둑... 네 운명을 잘라주지." },
+  "stage3":   { img: 'stage2.jpg', talk: "양아치들을 쓰러뜨렸다고? 진짜 주먹의 세계를 보여주마." },
+  "stage4":   { img: 'stage3.jpg', talk: "여기까지 오다니 대단하군. 하지만 내 읽기 능력은 피할 수 없을 거다." }
+};
 
-/* 보스 인트로 화면을 그리는 함수 (추가) */
+/* 보스 인트로 화면을 그리는 함수 */
 function renderBossIntro() {
-  const data = BOSS_INTRO_DATA[G.stageIdx];
+  const data = BOSS_INTRO_DATA[G.currentBossKey];
   const stage = STAGES[G.stageIdx];
   $('app').innerHTML = `
     ${titleBarHTML(stage.label)}
@@ -520,27 +524,41 @@ function renderBossIntro() {
       <button class="btn btn-primary" onclick="G.screen='battle'; render();">⚔️ 대결 시작!</button>
     </div>`;
 }
+
 const STAGES = [
   {
-    id:1, name:'STAGE 1', label:'STAGE 1 ',
+    id:1, name:'STAGE 1', label:'STAGE 1',
     enemyName:'양아치', enemyIcon:'😤',
     playerHp:10, enemyHp:5, enemyAtk:3,
-    enemyDeckBuild:()=>buildEnemyDeck('normal','normal','normal','normal','normal','normal')
+    enemyDeckBuild:()=> buildEnemyDeck('normal','normal','normal','normal','normal','normal')
   },
   {
-    id:2, name:'STAGE 2', label:'STAGE 2 ',
+    id:2, name:'STAGE 2', label:'STAGE 2',
+    isRandom: true,
+    subBosses: [
+      { name:'싸대기', icon:'✋', key:'ssadagi', deck: ['paper','paper','paper','paper','rock','scissors'], tier:'silver' },
+      { name:'돌머리', icon:'👊', key:'dolmeori', deck: ['rock','rock','rock','rock','paper','scissors'], tier:'silver' },
+      { name:'가위손', icon:'✌️', key:'scissors', deck: ['scissors','scissors','scissors','scissors','rock','paper'], tier:'silver' }
+    ],
+    playerHp:10, enemyHp:8, enemyAtk:3
+  },
+  {
+    id:3, name:'STAGE 3', label:'STAGE 3',
     enemyName:'두목', enemyIcon:'😎',
-    playerHp:10, enemyHp:7, enemyAtk:4,
-    enemyDeckBuild:()=>buildEnemyDeck('normal','normal','normal','normal','normal','silver')
+    playerHp:12, enemyHp:10, enemyAtk:4,
+    enemyDeckBuild:()=> {
+      const types = ['scissors','scissors','scissors','paper','paper','rock'];
+      return shuffle(types.map((t, i) => makeCard(t, i === 0 ? 'silver' : 'normal')));
+    }
   },
   {
-    id:3, name:'STAGE 3', label:'STAGE 3 ',
+    id:4, name:'STAGE 4', label:'FINAL STAGE',
     enemyName:'문동진', enemyIcon:'👹',
-    playerHp:10, enemyHp:12, enemyAtk:5,
-    enemyDeckBuild:()=>buildEnemyDeck('normal','normal','silver','silver','gold','gold')
+    playerHp:15, enemyHp:15, enemyAtk:5,
+    enemyDeckBuild:()=> buildEnemyDeck('silver','silver','silver','normal','normal','normal'),
+    fixedPersonality: 'counter'
   }
 ];
-
 const PERSONALITIES = [
   { key:'aggressive', label:'강공형', badgeClass:'pb-aggressive', icon:'⚔️', desc:'강화 카드와 강력한 공격 선호' },
   { key:'counter',    label:'반격형', badgeClass:'pb-counter',    icon:'🔄', desc:'상대 덱 분석 후 카운터' },
@@ -656,27 +674,45 @@ function cpuPickCard(){
 }
 
 /* ── 스테이지 초기화 ── */
+/* ── 스테이지 초기화 (v4.0 랜덤 보스 대응) ── */
 function initStage(idx, hpOverride=null){
-  const st=STAGES[idx];
-  G.stageIdx=idx;
-  G.playerHp    =hpOverride!==null?hpOverride:st.playerHp;
-  G.playerMaxHp =st.playerHp;
-  G.enemyHp     =st.enemyHp;
-  G.enemyMaxHp  =st.enemyHp;
-  G.drawPile    =shuffle([...G.deck]);
-  G.discardPile =[];
-  G.hand        =[];
-  G.usedInHand  =[];
-  G.handDealt   =false;
-  G.dealAnimating=false;
-  G.enemyDeck        =st.enemyDeckBuild();
-  G.enemyDrawPile    =[...G.enemyDeck];
-  G.enemyDiscardPile =[];
-  G.cpuPersonality   =PERSONALITIES[Math.floor(Math.random()*3)].key;
-  const pInfo=PERSONALITIES.find(p=>p.key===G.cpuPersonality);
-  addLog(`🧠 적 성향: ${pInfo.icon} ${pInfo.label} — ${pInfo.desc}`,'enemy-log');
-}
+  let st = STAGES[idx];
+  G.stageIdx = idx;
+  
+  // 스테이지 2 랜덤 보스 처리
+  if(st.isRandom) {
+    const picked = st.subBosses[Math.floor(Math.random() * st.subBosses.length)];
+    st.enemyName = picked.name;
+    st.enemyIcon = picked.icon;
+    st.enemyDeckBuild = () => {
+      return shuffle(picked.deck.map((t, i) => makeCard(t, i === 0 ? picked.tier : 'normal')));
+    };
+    G.currentBossKey = picked.key; 
+  } else {
+    G.currentBossKey = `stage${idx + 1}`;
+  }
 
+  G.playerHp    = hpOverride !== null ? hpOverride : st.playerHp;
+  G.playerMaxHp = st.playerHp;
+  G.enemyHp     = st.enemyHp;
+  G.enemyMaxHp  = st.enemyHp;
+  G.drawPile    = shuffle([...G.deck]);
+  G.discardPile = [];
+  G.hand        = [];
+  G.usedInHand  = [];
+  G.handDealt   = false;
+  G.dealAnimating = false;
+  
+  G.enemyDeck        = st.enemyDeckBuild();
+  G.enemyDrawPile    = [...G.enemyDeck];
+  G.enemyDiscardPile = [];
+  
+  G.cpuPersonality = st.fixedPersonality || PERSONALITIES[Math.floor(Math.random()*3)].key;
+  
+  const pInfo = PERSONALITIES.find(p=>p.key===G.cpuPersonality);
+  addLog(`🧠 ${st.enemyName} 등장! 성향: ${pInfo.label}`,'enemy-log');
+}
+  
 /* ── 카드 내기 ── */
 /* ── 카드 내기 (시간차 대결 연출 적용 버전) ── */
 async function playCard(handIdx) {
