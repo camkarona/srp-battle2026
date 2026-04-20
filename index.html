@@ -915,9 +915,10 @@ function renderBattle(){
   const pInfo = PERSONALITIES.find(p => p.key === G.cpuPersonality);
 
   /* 적 pip (토글 시에만 표시) */
-  const eDrawIds = new Set(G.enemyDrawPile.map(c => c.id));
-  const enemyPips = G.enemyDeck.map(c => {
-    const isRemaining = eDrawIds.has(c.id);
+const eDrawIds = new Set(G.enemyDrawPile.map(c => c.id));
+const allEnemyCards = [...G.enemyDrawPile, ...G.enemyDiscardPile];
+const enemyPips = allEnemyCards.map(c => {
+  const isRemaining = eDrawIds.has(c.id);
     return `<div class="pip ${c.type} tier-${c.tier} ${isRemaining ? '' : 'enemy-drawn'}">
       <div class="pip-icon">${CARD_TYPES[c.type].icon}</div>
       <div class="pip-label">${c.type.slice(0,3).toUpperCase()}</div>
