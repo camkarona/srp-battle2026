@@ -992,7 +992,7 @@ const enemyPips = allEnemyCards.map(c => {
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
         <!-- 적 덱 요약 -->
         <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          <span style="font-size:.6rem; letter-spacing:2px; color:var(--enemy);">🎴 적의 덱</span>
+          <span style="font-size:.6rem; letter-spacing:2px; color:var(--enemy);">🎴 적 남은 패</span>
           <span style="font-size:1rem; display:flex; gap:8px; align-items:center;">
             ${remSummary}
           </span>
@@ -1002,7 +1002,7 @@ const enemyPips = allEnemyCards.map(c => {
         <button onclick="G.enemyDeckOpen=!G.enemyDeckOpen; render();"
           style="background:none; border:1px solid var(--enemy); border-radius:6px;
                  color:var(--enemy); font-size:.62rem; padding:3px 10px; cursor:pointer; white-space:nowrap;">
-          ${G.enemyDeckOpen ? '패 숨기기 ▲' : '남은 패 ▼'}
+          ${G.enemyDeckOpen ? '패 숨기기 ▲' : '패 보기 ▼'}
         </button>
       </div>
       <!-- 토글 시 pip 표시 -->
@@ -1113,7 +1113,7 @@ function confirmReward(){
 let restChoice=null, restUpgradeIdx=null;
 function renderRestStop(){
   const bSel=restChoice==='bakkus', uSel=restChoice==='upgrade';
-  const newHp = Math.min(G.playerHp + 5, G.playerMaxHp);
+  const newHp = G.playerHp + 5;
   const upSub=uSel?`
     <div style="font-size:.72rem;color:var(--text-dim);margin:10px 0 4px;text-align:center">강화할 카드를 선택하세요:</div>
     <div class="upgrade-pick">
@@ -1145,7 +1145,7 @@ function renderRestStop(){
              onclick="restChoice='bakkus';restUpgradeIdx=null;renderRestStop()">
           <div class="opt-icon">🥤</div>
           <div class="opt-name" style="color:var(--danger)">박카스</div>
-          <div class="opt-desc">HP <b style="color:var(--text)">${G.playerHp}</b> → <b style="color:var(--win)">${newHp}</b><br><span style="font-size:.6rem">(+5 회복,회복  ${G.playerMaxHp}))</span></div>
+          <div class="opt-desc">HP <b style="color:var(--text)">${G.playerHp}</b> → <b style="color:var(--win)">${newHp}</b><br><span style="font-size:.6rem">(+5 회복)</span></div>
         </div>
         <div class="option-card upgrade ${uSel?'selected':''}"
              onclick="restChoice='upgrade';restUpgradeIdx=null;renderRestStop()">
