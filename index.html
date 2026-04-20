@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>가위 바위 보 배틀 — S-R-P Battle v1.5</title>
+<title>가위 바위 보 배틀 — S-R-P Battle v4.0</title>
 <style>
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
   
@@ -526,22 +526,29 @@ function renderBossIntro() {
 }
 
 const STAGES = [
+  {const STAGES = [
   {
     id:1, name:'STAGE 1', label:'STAGE 1',
     enemyName:'양아치', enemyIcon:'😤',
     playerHp:10, enemyHp:5, enemyAtk:3,
-    enemyDeckBuild:()=> buildEnemyDeck('normal','normal','normal','normal','normal','normal')
+    // 💡 양아치 난이도 조절: 가위 3, 보 3으로 구성 (바위가 없어 가위에 강해짐)
+    enemyDeckBuild:()=> {
+      const types = ['scissors','scissors','scissors','paper','paper','paper'];
+      return shuffle(types.map(t => makeCard(t, 'normal')));
+    }
   },
   {
     id:2, name:'STAGE 2', label:'STAGE 2',
     isRandom: true,
     subBosses: [
-      { name:'싸대기', icon:'✋', key:'ssadagi', deck: ['paper','paper','paper','paper','rock','scissors'], tier:'silver' },
-      { name:'돌머리', icon:'👊', key:'dolmeori', deck: ['rock','rock','rock','rock','paper','scissors'], tier:'silver' },
-      { name:'가위손', icon:'✌️', key:'scissors', deck: ['scissors','scissors','scissors','scissors','rock','paper'], tier:'silver' }
+      { name:'싸대기', icon:'✋', key:'ssadagi', deck: ['paper','paper','paper','paper', 'rock', 'scissors'], tier:'silver' },
+      { name:'돌머리', icon:'👊', key:'dolmeori', deck: ['rock','rock','rock','rock', 'paper', 'scissors'], tier:'silver' },
+      { name:'가위손', icon:'✌️', key:'scissors', deck: ['scissors','scissors','scissors','scissors', 'rock', 'paper'], tier:'silver' }
     ],
     playerHp:10, enemyHp:8, enemyAtk:3
   },
+  // ... Stage 3, 4는 기존 유지
+];
   {
     id:3, name:'STAGE 3', label:'STAGE 3',
     enemyName:'두목', enemyIcon:'😎',
@@ -875,7 +882,7 @@ function renderTitle(){
 /* ② BATTLE — 상세 로그 및 접기 기능 적용 버전 */
 function renderBattle(){
   const stage = STAGES[G.stageIdx];
-  const bossData = BOSS_INTRO_DATA[G.stageIdx];
+ const bossData = BOSS_INTRO_DATA[G.currentBossKey];
   /* 플레이어의 현재 체력이 최대치보다 높으면, 현재 체력을 기준으로 바 너비 계산 */
   const pDisplayMax = Math.max(G.playerMaxHp, G.playerHp);
   const pPct = Math.max(0, (G.playerHp / pDisplayMax) * 100);
