@@ -620,6 +620,7 @@ function shuffle(arr){
 const G = {
   screen:'title', stageIdx:0,
   logFolded: false,
+  enemyDeckOpen: false,   // 적 덱 pip 토글
   playerHp:10, playerMaxHp:10,
   deck:[], drawPile:[], discardPile:[],
   hand:[], usedInHand:[],
@@ -649,9 +650,10 @@ function drawPlayerHand(){
    플레이어 핸드가 오픈이므로 아직 안 낸 카드를 정확히 파악 */
 function cpuPickCard(){
   if(G.enemyDrawPile.length===0){
-    G.enemyDrawPile=shuffle([...G.enemyDiscardPile]);
-    G.enemyDiscardPile=[];
-    G.enemyDeck=[...G.enemyDrawPile];
+    /* ★ 원본 enemyDeck id 보존 방식으로 재구성 → pip 추적 유지 */
+    const discardIds = new Set(G.enemyDiscardPile.map(c=>c.id));
+    G.enemyDrawPile = shuffle(G.enemyDeck.filter(c=>discardIds.has(c.id)));
+    G.enemyDiscardPile = [];
     addLog('🔄 적이 덱을 재구성했습니다!','enemy-log');
   }
   // 플레이어가 아직 안 낸 카드 (6장 오픈이므로 정확히 앎)
@@ -730,6 +732,7 @@ function initStage(idx, hpOverride=null){
   G.enemyDeck        = st.enemyDeckBuild();
   G.enemyDrawPile    = [...G.enemyDeck];
   G.enemyDiscardPile = [];
+  G.enemyDeckOpen    = false;
   
   G.cpuPersonality = st.fixedPersonality || PERSONALITIES[Math.floor(Math.random()*3)].key;
   
@@ -911,20 +914,7 @@ function renderBattle(){
 
   const pInfo = PERSONALITIES.find(p => p.key === G.cpuPersonality);
 
-  /* 플레이어 pip: 6장 오픈 — 낸 것은 spent */
-  const usedHIds = new Set(G.usedInHand.map(i => G.hand[i]?.id));
-  const playerPips = G.deck.map(c => {
-    // hand에 있고 usedInHand에 포함 → spent
-    const inHand = G.hand.find(h => h.id === c.id);
-    const spent = inHand ? G.usedInHand.includes(G.hand.indexOf(inHand)) : true;
-    return `<div class="pip ${c.type} tier-${c.tier} ${spent ? 'spent' : ''}">
-      <div class="pip-icon">${CARD_TYPES[c.type].icon}</div>
-      <div class="pip-label">${c.type.slice(0,3).toUpperCase()}</div>
-      <div class="pip-dmg">${TIER[c.tier].dmg}</div>
-    </div>`;
-  }).join('');
-
-  /* 적 pip: v4.5 전면 공개 (❓ 없음) — 남은 카드는 밝게, 낸 카드는 흐리게 */
+  /* 적 pip (토글 시에만 표시) */
   const eDrawIds = new Set(G.enemyDrawPile.map(c => c.id));
   const enemyPips = G.enemyDeck.map(c => {
     const isRemaining = eDrawIds.has(c.id);
@@ -939,7 +929,7 @@ function renderBattle(){
   const remSummary = ['scissors','rock','paper'].map(t =>
     rem[t] > 0 ? `<span style="color:var(--${t})">${CARD_TYPES[t].icon}×${rem[t]}</span>`
                : `<span style="opacity:.2">${CARD_TYPES[t].icon}×0</span>`
-  ).join('&nbsp;');
+  ).join('&nbsp;&nbsp;');
 
   /* 손패 렌더링: 6장 오픈 */
   let handHTML = '';
@@ -996,23 +986,24 @@ function renderBattle(){
     </div>
 
     <div class="panel">
-      <div id="tracker-area">
-        <div class="tracker-block">
-          <div class="tracker-title"><span>📋 MY HAND</span><span style="color:var(--text-dim);font-size:.55rem">남은 ${G.hand.length - G.usedInHand.length}장</span></div>
-          <div class="pip-row">${playerPips}</div>
-        </div>
-        <div class="tracker-block">
-          <div class="tracker-title">
-            <span style="color:var(--enemy)">🎴 ENEMY DECK</span>
-            <span style="font-size:.55rem;display:flex;align-items:center;gap:4px"><span style="color:var(--text-dim)">남은 ${G.enemyDrawPile.length}장</span>${G.enemyDrawPile.length===0?'<span class="reshuffle-badge">재구성!</span>':''}</span>
-          </div>
-          <div class="pip-row">${enemyPips}</div>
-          <div style="font-size:.6rem;margin-top:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <span style="font-size:.5rem;color:var(--text-dim);letter-spacing:1px">남은 타입:</span>
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+        <!-- 적 덱 요약 -->
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <span style="font-size:.6rem; letter-spacing:2px; color:var(--enemy);">🎴 적 남은 패</span>
+          <span style="font-size:.75rem; display:flex; gap:8px; align-items:center;">
             ${remSummary}
-          </div>
+          </span>
+          ${G.enemyDrawPile.length===0 ? '<span class="reshuffle-badge">재구성!</span>' : ''}
         </div>
+        <!-- 토글 버튼 -->
+        <button onclick="G.enemyDeckOpen=!G.enemyDeckOpen; render();"
+          style="background:none; border:1px solid var(--enemy); border-radius:6px;
+                 color:var(--enemy); font-size:.62rem; padding:3px 10px; cursor:pointer; white-space:nowrap;">
+          ${G.enemyDeckOpen ? '패 숨기기 ▲' : '패 보기 ▼'}
+        </button>
       </div>
+      <!-- 토글 시 pip 표시 -->
+      ${G.enemyDeckOpen ? `<div class="pip-row" style="margin-top:10px;">${enemyPips}</div>` : ''}
     </div>
 
     <div id="hand-zone">
