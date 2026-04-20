@@ -521,7 +521,8 @@ const TIER = {
 // 보스별 이미지와 대사 데이터 (원장님이 올리신 파일명으로 맞췄습니다)
 // ❶ 보스 인트로 데이터 (수정 완료)
 const BOSS_INTRO_DATA = {
-  "stage1":   { img: 'stage1.jpg', talk: "길거리 양아치 정도야 껌이겠지" },
+"stage1":   { img: 'stage1.jpg', talk: "길거리 양아치 정도야 껌이겠지" },
+  "nalchigi": { img: 'stage1.jpg', talk: "가방 이리 내! 내 가위질은 눈보다 빠르다고!" }, // 💡 날치기 임시 설정
   "ssadagi":  { img: 'ssadagi.jpg', talk: "내 손바닥은 바람보다 빠르지. 보자기 맛 좀 볼래?" },
   "dolmeori": { img: 'dolmeori.jpg', talk: "단단한 바위로 다 뭉개주마. 주먹이면 충분해!" },
   "scissors": { img: 'scissorshand.jpg', talk: "싹둑싹둑... 네 운명을 잘라주지." },
@@ -551,38 +552,38 @@ const PERSONALITIES = [
 
 const STAGES = [
   {
-    id:1, name:'STAGE 1', label:'STAGE 1',
-    enemyName:'양아치', enemyIcon:'😤',
-    playerHp:10, enemyHp:5, enemyAtk:3,
-    enemyDeckBuild:()=> {
-      const types = ['rock', 'rock', 'rock', 'rock', 'rock', 'scissors'];
-      return shuffle(types.map(t => makeCard(t, 'normal')));
-    }
+    id: 1, name: 'STAGE 1', label: 'STAGE 1',
+    isRandom: true, // 💡 1스테이지도 랜덤 등장으로 변경
+    subBosses: [
+      { name: '양아치', icon: '😤', key: 'stage1', deck: ['rock', 'rock', 'rock', 'rock', 'rock', 'scissors'], tier: 'normal' },
+      { name: '날치기', icon: '🏃', key: 'nalchigi', deck: ['scissors', 'scissors', 'scissors', 'scissors', 'scissors', 'paper'], tier: 'normal' }
+    ],
+    playerHp: 10, enemyHp: 5, enemyAtk: 3
   },
   {
-    id:2, name:'STAGE 2', label:'STAGE 2',
+    id: 2, name: 'STAGE 2', label: 'STAGE 2',
     isRandom: true,
     subBosses: [
-      { name:'싸대기', icon:'✋', key:'ssadagi', deck: ['paper','paper','paper','paper', 'rock', 'scissors'], tier:'silver' },
-      { name:'돌머리', icon:'👊', key:'dolmeori', deck: ['rock','rock','rock','rock', 'paper', 'scissors'], tier:'silver' },
-      { name:'가위손', icon:'✌️', key:'scissors', deck: ['scissors','scissors','scissors','scissors', 'rock', 'paper'], tier:'silver' }
+      { name: '싸대기', icon: '✋', key: 'ssadagi', deck: ['paper', 'paper', 'paper', 'paper', 'rock', 'scissors'], tier: 'silver' },
+      { name: '돌머리', icon: '👊', key: 'dolmeori', deck: ['rock', 'rock', 'rock', 'rock', 'paper', 'scissors'], tier: 'silver' },
+      { name: '가위손', icon: '✌️', key: 'scissors', deck: ['scissors', 'scissors', 'scissors', 'scissors', 'rock', 'paper'], tier: 'silver' }
     ],
-    playerHp:10, enemyHp:8, enemyAtk:3
+    playerHp: 10, enemyHp: 8, enemyAtk: 3
   },
   {
-    id:3, name:'STAGE 3', label:'STAGE 3',
-    enemyName:'두목', enemyIcon:'😎',
-    playerHp:12, enemyHp:10, enemyAtk:4,
-    enemyDeckBuild:()=> {
-      const types = ['scissors','scissors','scissors','paper','paper','rock'];
+    id: 3, name: 'STAGE 3', label: 'STAGE 3',
+    enemyName: '두목', enemyIcon: '😎',
+    playerHp: 12, enemyHp: 10, enemyAtk: 4,
+    enemyDeckBuild: () => {
+      const types = ['scissors', 'scissors', 'scissors', 'paper', 'paper', 'rock'];
       return shuffle(types.map((t, i) => makeCard(t, i === 0 ? 'silver' : 'normal')));
     }
   },
   {
-    id:4, name:'STAGE 4', label:'FINAL STAGE',
-    enemyName:'문동진', enemyIcon:'👹',
-    playerHp:15, enemyHp:15, enemyAtk:5,
-    enemyDeckBuild:()=> buildEnemyDeck('silver','silver','silver','normal','normal','normal'),
+    id: 4, name: 'STAGE 4', label: 'FINAL STAGE',
+    enemyName: '문동진', enemyIcon: '👹',
+    playerHp: 15, enemyHp: 15, enemyAtk: 5,
+    enemyDeckBuild: () => buildEnemyDeck('silver', 'silver', 'silver', 'normal', 'normal', 'normal'),
     fixedPersonality: 'counter'
   }
 ];
@@ -705,17 +706,16 @@ function initStage(idx, hpOverride=null){
   let st = STAGES[idx];
   G.stageIdx = idx;
   
-  // 스테이지 2 랜덤 보스 처리
   if(st.isRandom) {
     const picked = st.subBosses[Math.floor(Math.random() * st.subBosses.length)];
+    // 💡 선택된 서브 보스의 이름과 아이콘을 스테이지 정보에 덮어씁니다.
     st.enemyName = picked.name;
     st.enemyIcon = picked.icon;
-    st.enemyDeckBuild = () => {
-      return shuffle(picked.deck.map((t, i) => makeCard(t, i === 0 ? picked.tier : 'normal')));
-    };
-    G.currentBossKey = picked.key; 
+    G.currentBossKey = picked.key;
+    G.enemyDeck = shuffle(picked.deck.map((t, i) => makeCard(t, i === 0 ? (picked.tier || 'normal') : 'normal')));
   } else {
     G.currentBossKey = `stage${idx + 1}`;
+    G.enemyDeck = st.enemyDeckBuild();
   }
 
   G.playerHp    = hpOverride !== null ? hpOverride : st.playerHp;
@@ -729,7 +729,6 @@ function initStage(idx, hpOverride=null){
   G.handDealt   = false;
   G.dealAnimating = false;
   
-  G.enemyDeck        = st.enemyDeckBuild();
   G.enemyDrawPile    = [...G.enemyDeck];
   G.enemyDiscardPile = [];
   G.enemyDeckOpen    = false;
