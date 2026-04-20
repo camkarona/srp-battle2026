@@ -501,8 +501,9 @@ const TIER = {
   silver: { label:'실버', dmg:5, color:'var(--silver)'   },
   gold:   { label:'골드', dmg:7, color:'var(--gold)'     }
 };
-// 보스별 이미지와 대사 데이터
+
 // 보스별 이미지와 대사 데이터 (원장님이 올리신 파일명으로 맞췄습니다)
+// ❶ 보스 인트로 데이터 (수정 완료)
 const BOSS_INTRO_DATA = {
   "stage1":   { img: 'stage1.jpg', talk: "길거리 양아치 정도야 껌이겠지" },
   "ssadagi":  { img: 'ssadagi.jpg', talk: "내 손바닥은 바람보다 빠르지. 보자기 맛 좀 볼래?" },
@@ -512,7 +513,7 @@ const BOSS_INTRO_DATA = {
   "stage4":   { img: 'stage3.jpg', talk: "여기까지 오다니 대단하군. 하지만 내 읽기 능력은 피할 수 없을 거다." }
 };
 
-/* 보스 인트로 화면을 그리는 함수 */
+// ❷ 보스 인트로 렌더링 함수
 function renderBossIntro() {
   const data = BOSS_INTRO_DATA[G.currentBossKey];
   const stage = STAGES[G.stageIdx];
@@ -525,13 +526,12 @@ function renderBossIntro() {
     </div>`;
 }
 
+// ❸ 스테이지 전체 구성 (오류 방지를 위해 4단계까지 모두 포함)
 const STAGES = [
-  {const STAGES = [
   {
     id:1, name:'STAGE 1', label:'STAGE 1',
     enemyName:'양아치', enemyIcon:'😤',
     playerHp:10, enemyHp:5, enemyAtk:3,
-    // 💡 양아치 난이도 조절: 가위 3, 보 3으로 구성 (바위가 없어 가위에 강해짐)
     enemyDeckBuild:()=> {
       const types = ['scissors','scissors','scissors','paper','paper','paper'];
       return shuffle(types.map(t => makeCard(t, 'normal')));
@@ -547,8 +547,6 @@ const STAGES = [
     ],
     playerHp:10, enemyHp:8, enemyAtk:3
   },
-  // ... Stage 3, 4는 기존 유지
-];
   {
     id:3, name:'STAGE 3', label:'STAGE 3',
     enemyName:'두목', enemyIcon:'😎',
@@ -566,6 +564,45 @@ const STAGES = [
     fixedPersonality: 'counter'
   }
 ];
+
+// ❹ 스테이지 초기화 함수 (initStage)
+function initStage(idx, hpOverride=null){
+  let st = STAGES[idx];
+  G.stageIdx = idx;
+  
+  if(st.isRandom) {
+    const picked = st.subBosses[Math.floor(Math.random() * st.subBosses.length)];
+    st.enemyName = picked.name;
+    st.enemyIcon = picked.icon;
+    st.enemyDeckBuild = () => {
+      return shuffle(picked.deck.map((t, i) => makeCard(t, i === 0 ? picked.tier : 'normal')));
+    };
+    G.currentBossKey = picked.key; 
+  } else {
+    G.currentBossKey = `stage${idx + 1}`;
+  }
+
+  G.playerHp    = hpOverride !== null ? hpOverride : st.playerHp;
+  G.playerMaxHp = st.playerHp;
+  G.enemyHp     = st.enemyHp;
+  G.enemyMaxHp  = st.enemyHp;
+  G.drawPile    = shuffle([...G.deck]);
+  G.discardPile = [];
+  G.hand        = [];
+  G.usedInHand  = [];
+  G.handDealt   = false;
+  G.dealAnimating = false;
+  
+  G.enemyDeck        = st.enemyDeckBuild();
+  G.enemyDrawPile    = [...G.enemyDeck];
+  G.enemyDiscardPile = [];
+  
+  G.cpuPersonality = st.fixedPersonality || PERSONALITIES[Math.floor(Math.random()*3)].key;
+  
+  const pInfo = PERSONALITIES.find(p=>p.key===G.cpuPersonality);
+  addLog(`🧠 ${st.enemyName} 등장! 성향: ${pInfo.label}`,'enemy-log');
+}
+  
 const PERSONALITIES = [
   { key:'aggressive', label:'강공형', badgeClass:'pb-aggressive', icon:'⚔️', desc:'강화 카드와 강력한 공격 선호' },
   { key:'counter',    label:'반격형', badgeClass:'pb-counter',    icon:'🔄', desc:'상대 덱 분석 후 카운터' },
