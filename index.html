@@ -925,7 +925,9 @@ function renderBattle(){
     </div>`;
   }).join('');
 
-  const rem = enemyRemaining();
+  const rem = {scissors:0, rock:0, paper:0};
+[...G.enemyDrawPile, ...G.enemyDiscardPile].forEach(c => rem[c.type]++);
+  
   const remSummary = ['scissors','rock','paper'].map(t =>
     rem[t] > 0 ? `<span style="color:var(--${t})">${CARD_TYPES[t].icon}×${rem[t]}</span>`
                : `<span style="opacity:.2">${CARD_TYPES[t].icon}×0</span>`
@@ -1110,7 +1112,7 @@ function confirmReward(){
 let restChoice=null, restUpgradeIdx=null;
 function renderRestStop(){
   const bSel=restChoice==='bakkus', uSel=restChoice==='upgrade';
-  const newHp = G.playerHp + 5;
+  const newHp = Math.min(G.playerHp + 5, G.playerMaxHp);
   const upSub=uSel?`
     <div style="font-size:.72rem;color:var(--text-dim);margin:10px 0 4px;text-align:center">강화할 카드를 선택하세요:</div>
     <div class="upgrade-pick">
