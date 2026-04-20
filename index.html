@@ -555,7 +555,7 @@ const STAGES = [
     enemyName:'양아치', enemyIcon:'😤',
     playerHp:10, enemyHp:5, enemyAtk:3,
     enemyDeckBuild:()=> {
-      const types = ['scissors','scissors','scissors','paper','paper','paper'];
+      const types = ['rock', 'rock', 'rock', 'rock', 'rock', 'scissors'];
       return shuffle(types.map(t => makeCard(t, 'normal')));
     }
   },
