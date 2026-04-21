@@ -1,6 +1,17 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-68EHMNKC5F"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-68EHMNKC5F');
+</script>
+  
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>가위 바위 보 배틀 — S-R-P Battle v5.0</title>
@@ -937,12 +948,17 @@ function addLog(msg,type=''){
   if(G.log.length>40) G.log.pop();
 }
 function triggerStageClear(){
+  gtag('event', 'stage_clear', { stage: G.stageIdx + 1 });
+  
   G.isGameOver = true;
   SFX.stageClear();
   if(G.stageIdx<STAGES.length-1){ G.screen='reward'; render(); }
   else { G.screen='victory'; render(); }
 }
-function triggerGameOver(){ G.isGameOver = true; G.screen='gameover'; render(); }
+function triggerGameOver(){
+  gtag('event', 'game_over', { stage: G.stageIdx + 1 });
+  
+  G.isGameOver = true; G.screen='gameover'; render(); }
 function enemyRemaining(){
   const c={scissors:0,rock:0,paper:0};
   G.enemyDrawPile.forEach(x=>c[x.type]++);
