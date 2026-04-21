@@ -936,10 +936,17 @@ addLog(detailMsg, 'info');
 
   // 실제 HP 반영 및 로그 기록 로직
   const stage = STAGES[G.stageIdx];
-  if(res==='win'){
-    const dmg = TIER[pCard.tier].dmg;
-    G.enemyHp = Math.max(0, G.enemyHp - dmg);
-    addLog(`승리! ${dmg} 데미지!`,'win');
+if(res==='win'){
+    const rawDmg = TIER[pCard.tier].dmg; // 내 공격력
+    const eShield = TIER[eCard.tier].shield; // 적의 실드 (이 부분이 핵심!)
+    const finalDmg = Math.max(0, rawDmg - eShield); // 실드만큼 차감
+    
+    G.enemyHp = Math.max(0, G.enemyHp - finalDmg);
+    
+    if(eShield > 0)
+      addLog(`승리! 내 공격 ${rawDmg} - 적 실드 ${eShield} = ${finalDmg} 데미지!`,'win');
+    else
+      addLog(`승리! ${finalDmg} 데미지!`,'win');
   } else if(res==='lose'){
     const rawDmg   = stage.enemyAtk;
     const shield   = TIER[pCard.tier].shield;
