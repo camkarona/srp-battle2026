@@ -1004,6 +1004,7 @@ function titleBarHTML(sub=''){
 function render(){
   ({
     title:    renderTitle,
+    tutorial: renderTutorial,
     boss_intro: renderBossIntro,
     battle:   renderBattle,
     reward:   renderReward,
@@ -1013,8 +1014,7 @@ function render(){
   })[G.screen]?.();
 }
 
-/* ① TITLE — 디자인 및 제작자 정보 수정 버전 */
-/* ① TITLE — 최종 디자인 */
+/* ① TITLE — 최종 디자인 (튜토리얼 버튼 추가 버전) */
 function renderTitle(){
   $('app').innerHTML = `
     <div id="title-screen">
@@ -1026,8 +1026,12 @@ function renderTitle(){
         <span>✌️</span><span>✊</span><span>🖐️</span>
       </div>
 
-      <div style="margin: 40px 0;">
+      <div style="margin: 40px 0 10px 0;">
         <button class="btn btn-primary" onclick="startGame()" style="padding: 15px 40px; font-size: 1rem;">⚔️ 게임 시작</button>
+      </div>
+
+      <div style="margin-bottom: 40px;">
+        <button class="btn btn-draw" onclick="G.screen='tutorial'; render();" style="padding: 10px 30px;">📖 튜토리얼 보기</button>
       </div>
 
       <div style="margin-top:50px; line-height:1.8; letter-spacing:1px; font-family:'Orbitron', sans-serif;">
@@ -1043,6 +1047,41 @@ function renderTitle(){
       </div>
     </div>`;
 }
+
+/* ③ TUTORIAL — 원장님이 요청하신 1~5번 룰 설명 화면 */
+function renderTutorial() {
+  $('app').innerHTML = `
+    ${titleBarHTML('GUIDE — 게임 방법')}
+    <div class="panel" style="padding:20px; line-height:1.7; font-size:0.85rem; max-height: 400px; overflow-y: auto;">
+      <div style="margin-bottom:15px;">
+        <b style="color:var(--accent2)">1. 기본 가위바위보 룰</b><br>
+        가위는 보를, 보는 바위를, 바위는 가위를 이깁니다. 승리 시 적에게 카드에 적힌 데미지를 입힙니다.
+      </div>
+      <div style="margin-bottom:15px;">
+        <b style="color:var(--accent2)">2. 강화와 회복</b><br>
+        스테이지를 클리어할 때마다 카드를 강화하거나, 휴게소에서 HP를 회복하며 최종 보스 '문동진'까지 도달해야 합니다.
+      </div>
+      <div style="margin-bottom:15px;">
+        <b style="color:var(--accent2)">3. 카드 등급</b><br>
+        카드는 노멀, 실버, 골드 등급이 있습니다. 등급이 높을수록 데미지가 강해지며, 적의 공격을 막는 실드(🛡️)도 생겨납니다.
+      </div>
+      <div style="margin-bottom:15px;">
+        <b style="color:var(--accent2)">4. 실드 시스템</b><br>
+        대결에서 패배하더라도 내 카드에 실드(🛡️)가 있다면, 적의 데미지를 그만큼 방어하여 내 체력을 보존할 수 있습니다.
+      </div>
+      <div style="margin-bottom:15px;">
+        <b style="color:var(--accent2)">5. 적의 성향</b><br>
+        적은 성향에 따라 패를 내는 전략이 다릅니다.<br>
+        - ⚔️ <b>강공형</b>: 높은 데미지의 카드를 우선 사용<br>
+        - 🔄 <b>반격형</b>: 내 패를 분석하여 이기는 패를 내려 함<br>
+        - 🛡️ <b>신중형</b>: 무승부 이상을 노리며 안정적으로 플레이
+      </div>
+      <div style="text-align:center; margin-top:20px; margin-bottom:10px;">
+        <button class="btn btn-primary" onclick="G.screen='title'; render();" style="width:100%">확인 (돌아가기)</button>
+      </div>
+    </div>`;
+}
+
   
 /* ② BATTLE — render는 G 상태만 읽어서 그린다 */
 /* ② BATTLE — 상세 로그 및 접기 기능 적용 버전 */
