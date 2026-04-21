@@ -87,7 +87,7 @@ body::before {
   margin-top: 1px;
 }
 .title-ver { font-family:'Orbitron',sans-serif; font-size:.5rem; letter-spacing:4px; color:var(--muted); }
-#stage-label { font-size:.62rem; letter-spacing:3px; color:var(--text-dim); margin-top:4px; }
+#stage-label { font-size:1.1rem; font-weight:800; letter-spacing:4px; color:#ffffff; margin-top:4px; text-shadow: 0 0 12px rgba(255,255,255,.3); }
 
 .personality-badge {
   display:inline-block; margin-top:5px;
@@ -105,13 +105,9 @@ body::before {
 #hp-area { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 /* HP 블록: 적 이미지가 배경에 깔리도록 설정 */
 .hp-block {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  position: relative; /* 레이어 기준점 */
-  overflow: hidden;
-  border-radius: 8px;
-  padding: 8px;
+  display: flex; flex-direction: column; gap: 6px;
+  position: relative; overflow: hidden;
+  border-radius: 10px; padding: 14px 12px; min-height: 80px;
 }
 
 /* 적 에셋이 들어갈 투명 배경 레이어 */
@@ -331,7 +327,8 @@ body::before {
 .btn-draw:disabled { opacity:.3; cursor:not-allowed; transform:none; box-shadow:none; }
 
 /* ═══ TITLE SCREEN ═══ */
-#title-screen { text-align:center; padding:34px 0; }
+#title-screen { text-align:center; padding:34px 0; min-height:90vh; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+#boss-intro { text-align:center; padding:20px 20px; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:85vh; }
 .hero-ko  { font-family:'Black Han Sans',sans-serif; font-size:2.5rem; color:var(--accent); text-shadow:0 0 40px rgba(232,200,74,.6); letter-spacing:4px; margin-bottom:4px; }
 .hero-en  { font-family:'Orbitron',sans-serif; font-weight:900; font-size:1rem; letter-spacing:8px; color:var(--accent2); text-shadow:0 0 16px rgba(74,240,200,.4); margin-bottom:2px; }
 .hero-ver { font-family:'Orbitron',sans-serif; font-size:.6rem; letter-spacing:5px; color:var(--muted); margin-bottom:18px; }
@@ -342,6 +339,20 @@ body::before {
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
 
 /* ═══ OPTION CARDS ═══ */
+/* 휴게소 배경 */
+.reststop-bg {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: linear-gradient(135deg, #0a1a1a 0%, #0d2020 50%, #081818 100%);
+}
+.reststop-bg::after {
+  content: '';
+  position: absolute; inset: -50%;
+  background-image: radial-gradient(circle, rgba(74,240,200,.06) 1px, transparent 1px);
+  background-size: 30px 30px;
+  animation: driftBg 20s linear infinite;
+}
+@keyframes driftBg { from{transform:translate(0,0)} to{transform:translate(30px,30px)} }
+
 .option-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:14px 0; }
 .option-card {
   border:2px solid var(--border); border-radius:13px;
@@ -376,8 +387,7 @@ body::before {
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
 
-/* ═══ BOSS INTRO SCREEN (추가) ═══ */
-#boss-intro { text-align:center; padding:30px 20px; display:flex; flex-direction:column; align-items:center; }
+/* ═══ BOSS INTRO SCREEN ═══ */
 .boss-img-frame {
   width:240px; height:240px; border:4px solid var(--border); border-radius:15px;
 
@@ -465,7 +475,7 @@ const BGM = {
   init(){
     this.battle = document.getElementById('bgm-track');
     this.rest   = document.getElementById('bgm-rest');
-    if(this.rest) this.rest.volume = 0.07;
+    if(this.rest) this.rest.volume = 0.18;
   },
 
   /* 페이드 유틸 */
@@ -518,7 +528,8 @@ const BGM = {
   },
 
   stop(){
-    [this.battle, this.rest].forEach(el=>{ if(el){ el.pause(); el.currentTime=0; } });
+    if(this.battle){ this.battle.pause(); this.battle.currentTime=0; }
+    if(this.rest)  { this.rest.pause(); }  // 위치 유지 — currentTime 리셋 안 함
     this._current = null;
     this._battleStarted = false;
   }
@@ -597,7 +608,6 @@ function renderBossIntro() {
   const data = BOSS_INTRO_DATA[G.currentBossKey];
   const stage = STAGES[G.stageIdx];
 
-  // 적 덱 pip (인트로에서 보여줄 용)
   const introPips = G.enemyDeck.map(c => {
     const ct = CARD_TYPES[c.type];
     const shd = TIER[c.tier].shield;
@@ -612,26 +622,19 @@ function renderBossIntro() {
   $('app').innerHTML = `
     ${titleBarHTML(stage.label)}
     <div id="boss-intro">
+      <div style="font-size:.62rem;letter-spacing:2px;color:var(--enemy);margin-bottom:6px;">🎴 적의 덱</div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-bottom:14px;">${introPips}</div>
       <div class="boss-img-frame" style="background-image: url('${data.img}')"></div>
       <div class="boss-dialogue">"${data.talk}"</div>
-      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:10px;">
-        <button class="btn btn-primary" onclick="BGM.playBattle(); G.screen='battle'; render();">⚔️ 대결 시작!</button>
-        <button class="btn" style="background:none;border:1px solid var(--enemy);color:var(--enemy);padding:12px 18px;border-radius:9px;font-size:.82rem;"
-          onclick="this.parentNode.nextElementSibling.style.display=this.parentNode.nextElementSibling.style.display==='none'?'flex':'none'; this.textContent=this.textContent.includes('▼')?'덱 숨기기 ▲':'덱 보기 ▼';">
-          덱 보기 ▼
-        </button>
-      </div>
-      <div style="display:none;flex-wrap:wrap;gap:6px;justify-content:center;padding:8px 0;">
-        ${introPips}
-      </div>
+      <button class="btn btn-primary" onclick="BGM.playBattle(); G.screen='battle'; render();">⚔️ 대결 시작!</button>
     </div>`;
 }
 
 // ❸ 스테이지 전체 구성
 const PERSONALITIES = [
-  { key:'aggressive', label:'강공형', badgeClass:'pb-aggressive', icon:'⚔️', desc:'강화 카드와 강력한 공격 선호' },
-  { key:'counter',    label:'반격형', badgeClass:'pb-counter',    icon:'🔄', desc:'상대 덱 분석 후 카운터' },
-  { key:'careful',    label:'신중형', badgeClass:'pb-careful',    icon:'🛡️', desc:'안정적인 무승부 이상 추구' }
+  { key:'aggressive', label:'강공형', badgeClass:'pb-aggressive', icon:'⚔️', desc:'강화 카드와 강력한 공격 선호', summary:'강한 카드 우선 — 높은 데미지를 노립니다' },
+  { key:'counter',    label:'반격형', badgeClass:'pb-counter',    icon:'🔄', desc:'상대 덱 분석 후 카운터',      summary:'내 패를 분석 — 이기는 패를 골라냅니다' },
+  { key:'careful',    label:'신중형', badgeClass:'pb-careful',    icon:'🛡️', desc:'안정적인 무승부 이상 추구',   summary:'무승부 이상 확률 계산 — 실수를 최소화합니다' }
 ];
 
 const STAGES = [
@@ -1002,13 +1005,9 @@ function renderTitle(){
 function renderBattle(){
   const stage = STAGES[G.stageIdx];
  const bossData = BOSS_INTRO_DATA[G.currentBossKey];
-  /* 플레이어의 현재 체력이 최대치보다 높으면, 현재 체력을 기준으로 바 너비 계산 */
-  const pDisplayMax = Math.max(G.playerMaxHp, G.playerHp);
-  const pPct = Math.max(0, (G.playerHp / pDisplayMax) * 100);
-  const pTrackW = pDisplayMax * 15 + "px"; // 체력이 많아질수록 바가 오른쪽으로 길어집니다.
-
-  const ePct = Math.max(0, (G.enemyHp / G.enemyMaxHp) * 100);
-  const eTrackW = G.enemyMaxHp * 15 + "px";
+  /* HP 퍼센트 — 단순 현재/최대 비율 */
+  const pPct = Math.max(0, (G.playerHp / G.playerMaxHp) * 100);
+  const ePct = Math.max(0, (G.enemyHp  / G.enemyMaxHp)  * 100);
 
   const pInfo = PERSONALITIES.find(p => p.key === G.cpuPersonality);
 
@@ -1059,20 +1058,21 @@ function renderBattle(){
 
   $('app').innerHTML = `
     ${titleBarHTML(`${stage.label} &nbsp;|&nbsp; ${stage.enemyIcon} ${stage.enemyName}`)}
-    ${pInfo ? `<div style="text-align:center;margin-top:-4px">
+    ${pInfo ? `<div style="text-align:center;margin-top:-4px;margin-bottom:2px;">
       <span class="personality-badge ${pInfo.badgeClass}">${pInfo.icon} CPU ${pInfo.label}</span>
+      <div style="font-size:.6rem;color:var(--text-dim);margin-top:4px;">${pInfo.summary}</div>
     </div>` : ''}
 
     <div class="panel">
       <div id="hp-area">
         <div class="hp-block">
           <div class="hp-label"><span>⚔️ PLAYER HP</span><span>${G.playerHp} / ${G.playerMaxHp}</span></div>
-          <div class="hp-track" style="--max-w: ${pTrackW}"><div class="hp-fill" id="player-hp-fill" style="width:${pPct}%"></div></div>
+          <div class="hp-track"><div class="hp-fill" id="player-hp-fill" style="width:${pPct}%"></div></div>
         </div>
         <div class="hp-block">
           <div class="enemy-bg-sprite" style="background-image: url('${bossData.img}')"></div>
           <div class="hp-label"><span>${stage.enemyIcon} ENEMY HP</span><span>${G.enemyHp} / ${G.enemyMaxHp}</span></div>
-          <div class="hp-track" style="--max-w: ${eTrackW}"><div class="hp-fill" id="enemy-hp-fill" style="width:${ePct}%"></div></div>
+          <div class="hp-track"><div class="hp-fill" id="enemy-hp-fill" style="width:${ePct}%"></div></div>
         </div>
       </div>
     </div>
@@ -1121,6 +1121,10 @@ function renderBattle(){
    ★ render()를 여기서 다시 부르지 않음 → 충돌 없음
 */
 function handleDrawBtn(){
+  // ★ 새 라운드 시작: 적 덱도 완전 리셋 → 적 남은 패 즉시 풀패로 표시
+  G.enemyDrawPile    = shuffle([...G.enemyDeck]);
+  G.enemyDiscardPile = [];
+
   drawPlayerHand();        // G.hand 6장 업데이트
   G.handDealt=false;
   G.dealAnimating=true;
@@ -1170,16 +1174,15 @@ function renderReward(){
     const sel=rewardPickIdx===i;
     const nt=c.tier==='normal'?'silver':'gold';
     return `<div class="upg-card ${sel?'selected':''} ${isMax?'locked':''}"
-                 onclick="${isMax?'':` rewardPickIdx=${i}; renderReward()`}">
+                 onclick="${isMax?'':'rewardPickIdx='+i+'; renderReward()'}">
       <div class="uc-icon">${ct.icon}</div>
       <div class="uc-name">${ct.label}</div>
       <div class="uc-dmg" style="color:${isMax?'var(--gold)':'var(--normal-c)'}">
-        ${isMax?'MAX':`${TIER[c.tier].dmg}<span style='color:${TIER[nt].color}'>→${TIER[nt].dmg}DMG</span>`}
+        ${isMax?'MAX':`${TIER[c.tier].dmg}<span style='color:${TIER[nt].color}'>→${TIER[nt].dmg}DMG</span> <span style='color:var(--shield);font-size:.7rem'>🛡${TIER[c.tier].shield}→${TIER[nt].shield}</span>`}
       </div>
     </div>`;
   }).join('');
   const canConfirm=allMax||rewardPickIdx!==null;
-  $('app').innerHTML=`
     ${titleBarHTML('CLEAR — 클리어 보상')}
     <div class="panel" style="text-align:center;padding:22px 20px">
       <div style="font-size:2.5rem;margin-bottom:8px">🏅</div>
@@ -1190,7 +1193,8 @@ function renderReward(){
         카드 1장을 한 단계 강화하세요!<br>
         <span style="color:var(--normal-c)">노멀(3)</span> →
         <span style="color:var(--silver)">실버(5)</span> →
-        <span style="color:var(--gold)">골드(7)</span>
+        <span style="color:var(--gold)">골드(7)</span><br>
+        <span style="font-size:.7rem;color:var(--shield)">🛡 강화 시 실드도 증가: 노멀(0) → 실버(🛡2) → 골드(🛡4)</span>
         ${allMax?'<br>모든 카드가 최대입니다.':''}
       </div>
       ${allMax?'':`<div class="upgrade-pick">${cards}</div>`}
@@ -1217,14 +1221,15 @@ function renderRestStop(){
   const bSel=restChoice==='bakkus', uSel=restChoice==='upgrade';
   const newHp = G.playerHp + 5;
   const upSub=uSel?`
-    <div style="font-size:.72rem;color:var(--text-dim);margin:10px 0 4px;text-align:center">강화할 카드를 선택하세요:</div>
+    <div style="font-size:.72rem;color:var(--text-dim);margin:10px 0 2px;text-align:center">강화할 카드를 선택하세요:</div>
+    <div style="font-size:.62rem;color:var(--shield);margin-bottom:6px;text-align:center">강화 효과: 공격력 +2, 실드 +2 증가</div>
     <div class="upgrade-pick">
       ${G.deck.map((c,i)=>{
         const isMax=c.tier==='gold', sel=restUpgradeIdx===i;
         const nt=c.tier==='normal'?'silver':'gold';
         const ct=CARD_TYPES[c.type];
         return `<div class="upg-card ${sel?'selected':''} ${isMax?'locked':''}"
-                     onclick="${isMax?'':` restUpgradeIdx=${i}; renderRestStop()`}">
+                     onclick="${isMax?'':'restUpgradeIdx='+i+'; renderRestStop()'}">
           <div class="uc-icon">${ct.icon}</div>
           <div class="uc-name">${ct.label}</div>
           <div class="uc-dmg" style="color:${isMax?'var(--gold)':'var(--normal-c)'}">
@@ -1236,8 +1241,9 @@ function renderRestStop(){
   const canConfirm=bSel||(uSel&&restUpgradeIdx!==null);
   BGM.playRest();
   $('app').innerHTML=`
+    <div class="reststop-bg"></div>
     ${titleBarHTML('⛺ 휴게소')}
-    <div class="panel" style="padding:22px 20px">
+    <div class="panel" style="padding:22px 20px; position:relative; z-index:1;">
       <div style="text-align:center;margin-bottom:16px">
         <div style="font-size:2.2rem;margin-bottom:6px">⛺</div>
         <div style="font-family:'Black Han Sans',sans-serif;font-size:1.2rem;color:var(--accent2);margin-bottom:5px">휴게소에 도착했습니다</div>
@@ -1246,7 +1252,7 @@ function renderRestStop(){
       <div class="option-grid">
         <div class="option-card bakkus ${bSel?'selected':''}"
              onclick="restChoice='bakkus';restUpgradeIdx=null;renderRestStop()">
-          <div class="opt-icon">🥤</div>
+          <div class="opt-icon">🥫</div>
           <div class="opt-name" style="color:var(--danger)">박카스</div>
           <div class="opt-desc">HP <b style="color:var(--text)">${G.playerHp}</b> → <b style="color:var(--win)">${newHp}</b><br><span style="font-size:.6rem">(+5 회복)</span></div>
         </div>
@@ -1254,7 +1260,7 @@ function renderRestStop(){
              onclick="restChoice='upgrade';restUpgradeIdx=null;renderRestStop()">
           <div class="opt-icon">⚡</div>
           <div class="opt-name" style="color:var(--silver)">카드 강화</div>
-          <div class="opt-desc">내 덱 카드 1장을<br>한 단계 강화합니다<br><b style="color:var(--gold)">최대 골(7DMG)</b></div>
+          <div class="opt-desc">내 덱 카드 1장을<br>한 단계 강화합니다<br><b style="color:var(--gold)">최대 골(7DMG)</b><br><span style="color:var(--shield);font-size:.6rem">🛡 실드도 함께 증가 (노멀0→실버2→골드4)</span></div>
         </div>
       </div>
       ${upSub}
