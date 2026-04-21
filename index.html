@@ -461,7 +461,8 @@ background-size: contain;      /* cover 대신 contain으로 변경 */
      ════════════════════════════════════════ -->
 <audio id="bgm-track" src="backgroundmusic.mp3" loop preload="none"></audio>
 <audio id="bgm-rest"  src="PixelBudgetLoop.mp3"  loop preload="none"></audio>
-  <audio id="bgm-gameover" src="GameOverScreen.mp3" preload="none"></audio>
+<audio id="bgm-gameover" src="GameOverScreen.mp3" preload="none"></audio>
+<audio id="bgm-victory" src="ClearParade.mp3" preload="none"></audio>
   
 <div id="clash-overlay">
   <div class="clash-stage">
@@ -545,6 +546,13 @@ playGameOver(){
   this._current = null;
   const go = document.getElementById('bgm-gameover');
   if(go){ go.volume=0.4; go.currentTime=0; go.play().catch(()=>{}); }
+},
+  playVictory(){
+  if(this.battle){ this._fade(this.battle, this.battle.volume, 0, 800, ()=>{ this.battle.pause(); }); }
+  if(this.rest)  { this._fade(this.rest, this.rest.volume, 0, 800, ()=>{ this.rest.pause(); }); }
+  this._current = null;
+  const vic = document.getElementById('bgm-victory');
+  if(vic){ vic.volume=0.4; vic.currentTime=0; vic.play().catch(()=>{}); }
 },
   
   stop(){
@@ -677,20 +685,24 @@ const STAGES = [
     ],
     playerHp: 10, enemyHp: 8, enemyAtk: 3
   },
-  {
+ {
     id: 3, name: 'STAGE 3', label: 'STAGE 3',
     enemyName: '두목', enemyIcon: '😎',
     playerHp: 12, enemyHp: 10, enemyAtk: 4,
     enemyDeckBuild: () => {
       const types = ['scissors', 'scissors', 'scissors', 'paper', 'paper', 'rock'];
-      return shuffle(types.map((t, i) => makeCard(t, i === 0 ? 'silver' : 'normal')));
+      // 💡 i < 3 조건을 통해 총 3장의 카드를 실버로 만듭니다. (나머지 3장은 노멀)
+      return shuffle(types.map((t, i) => makeCard(t, i < 3 ? 'silver' : 'normal')));
     }
   },
   {
     id: 4, name: 'STAGE 4', label: 'FINAL STAGE',
     enemyName: '문동진', enemyIcon: '👹',
     playerHp: 15, enemyHp: 15, enemyAtk: 5,
-    enemyDeckBuild: () => buildEnemyDeck('silver', 'silver', 'silver', 'normal', 'normal', 'normal'),
+    enemyDeckBuild: () => {
+      // 💡 실버 2장, 골드 2장, 노멀 2장으로 총 6장 덱을 구성합니다.
+      return buildEnemyDeck('silver', 'silver', 'gold', 'gold', 'normal', 'normal');
+    },
     fixedPersonality: 'counter'
   }
 ];
@@ -1327,7 +1339,9 @@ function renderGameOver(){
 
 /* ⑥ VICTORY */
 function renderVictory(){
-  $('app').innerHTML=`
+  function renderVictory(){
+  BGM.playVictory();
+    $('app').innerHTML=`
     ${titleBarHTML()}
     <div class="panel" style="text-align:center;padding:36px 20px">
       <div style="font-size:3rem;margin-bottom:12px">🏆</div>
