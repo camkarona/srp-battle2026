@@ -1339,9 +1339,9 @@ function renderGameOver(){
 
 /* ⑥ VICTORY */
 function renderVictory(){
-  function renderVictory(){
   BGM.playVictory();
-    $('app').innerHTML=`
+  $('app').innerHTML = `...`; // (기존 내용 유지)
+} // 깔끔하게 하나만 남기고 닫아주세요.
     ${titleBarHTML()}
     <div class="panel" style="text-align:center;padding:36px 20px">
       <div style="font-size:3rem;margin-bottom:12px">🏆</div>
