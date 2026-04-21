@@ -1148,11 +1148,12 @@ function handleDrawBtn(){
       if(slots[0]) slots[0].replaceWith(div);
       else handArea.appendChild(div);
 
-      if(i===G.hand.length-1){
+    if(i===G.hand.length-1){
         setTimeout(()=>{
           G.handDealt=true;
           G.dealAnimating=false;
           div.classList.remove('dealing');
+          render();
         }, 400);
       }
     }, i*180); // 0.18초 간격 (6장이라 더 빠르게)
