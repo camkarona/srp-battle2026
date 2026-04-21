@@ -1295,11 +1295,8 @@ function confirmRestStop(){
 }
 
 /* ⑤ GAME OVER */
-  function renderGameOver(){
-  BGM.playGameOver();  // ← 추가
-  $('app').innerHTML=`
-  
 function renderGameOver(){
+  BGM.playGameOver();
   $('app').innerHTML=`
     ${titleBarHTML()}
     <div class="panel" style="text-align:center;padding:36px 20px">
