@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>가위 바위 보 배틀 — S-R-P Battle v4.5</title>
+<title>가위 바위 보 배틀 — S-R-P Battle v5.0</title>
 <style>
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
   
@@ -28,9 +28,21 @@
   --lose:        #f04a6a;
   --draw:        #e8c84a;
   --enemy:       #ff6b8a;
+  --shield:      #60c8ff;
+  --glow-shield: rgba(96,200,255,.3);
   --glow-gold:   rgba(255,208,96,.4);
   --glow-silver: rgba(184,208,240,.28);
   --font-main: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+}
+
+/* 실드 표시 */
+.card-shield {
+  font-family:'Rajdhani', sans-serif; font-size:.85rem; font-weight:700;
+  color: var(--shield); position:absolute; bottom:5px; left:6px; letter-spacing:.5px;
+}
+.pip-shield {
+  font-family:'Rajdhani', sans-serif; font-size:.72rem; font-weight:700;
+  color: var(--shield); position:absolute; bottom:4px; left:4px; letter-spacing:.5px;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -427,6 +439,7 @@ background-size: contain;      /* cover 대신 contain으로 변경 */
      자동으로 루프 재생됩니다. 파일이 없으면 조용히 무시됩니다.
      ════════════════════════════════════════ -->
 <audio id="bgm-track" src="backgroundmusic.mp3" loop preload="none"></audio>
+<audio id="bgm-rest"  src="PixelBudgetLoop.mp3"  loop preload="none"></audio>
   
 <div id="clash-overlay">
   <div class="clash-stage">
@@ -438,31 +451,80 @@ background-size: contain;      /* cover 대신 contain으로 변경 */
 </div>
   
 <script>
-/* BGM 컨트롤 래퍼 */
+/* ══ BGM 시스템 v5.0 ══
+   - battle BGM: backgroundmusic.mp3 (위치 기억, 페이드인 복귀)
+   - rest BGM:   PixelBudgetLoop.mp3 (볼륨 7%, 잔잔하게)
+   - 전환 시 크로스페이드 0.8초
+*/
 const BGM = {
-  el: null,
-  _started: false,
+  battle: null,
+  rest:   null,
+  _battleStarted: false,
+  _current: null,   // 'battle' | 'rest' | null
+
   init(){
-    this.el = document.getElementById('bgm-track');
+    this.battle = document.getElementById('bgm-track');
+    this.rest   = document.getElementById('bgm-rest');
+    if(this.rest) this.rest.volume = 0.07;
   },
+
+  /* 페이드 유틸 */
+  _fade(el, fromVol, toVol, duration, cb){
+    if(!el) return;
+    const steps = 20;
+    const interval = duration / steps;
+    const delta = (toVol - fromVol) / steps;
+    let step = 0;
+    el.volume = Math.max(0, Math.min(1, fromVol));
+    const t = setInterval(()=>{
+      step++;
+      el.volume = Math.max(0, Math.min(1, fromVol + delta * step));
+      if(step >= steps){ clearInterval(t); if(cb) cb(); }
+    }, interval);
+  },
+
+  /* 전투 BGM — 위치 기억, 페이드인 */
+  playBattle(){
+    if(this._current === 'battle') return;
+    // 휴게소 BGM 페이드아웃
+    if(this._current === 'rest' && this.rest){
+      this._fade(this.rest, this.rest.volume, 0, 800, ()=>{ this.rest.pause(); });
+    }
+    this._current = 'battle';
+    if(!this.battle) return;
+    this.battle.volume = 0;
+    this.battle.play().catch(()=>{});
+    this._battleStarted = true;
+    this._fade(this.battle, 0, 0.35, 1200);
+  },
+
+  /* 휴게소 BGM — 전투 위치 저장 후 전환 */
+  playRest(){
+    if(this._current === 'rest') return;
+    // 전투 BGM 페이드아웃 (위치는 유지)
+    if(this._current === 'battle' && this.battle){
+      this._fade(this.battle, this.battle.volume, 0, 800, ()=>{ this.battle.pause(); });
+    }
+    this._current = 'rest';
+    if(!this.rest) return;
+    this.rest.volume = 0;
+    this.rest.play().catch(()=>{});
+    this._fade(this.rest, 0, 0.07, 1200);
+  },
+
+  /* 처음 시작 (첫 클릭) */
   play(){
-    if(!this.el) return;
-    this.el.volume = 0.35;
-    this.el.play().catch(()=>{}); // 브라우저 autoplay 정책 무시
-    this._started = true;
+    if(!this._battleStarted) this.playBattle();
   },
+
   stop(){
-    if(!this.el) return;
-    this.el.pause();
-    this.el.currentTime = 0;
-  },
-  setVolume(v){ if(this.el) this.el.volume = v; }
+    [this.battle, this.rest].forEach(el=>{ if(el){ el.pause(); el.currentTime=0; } });
+    this._current = null;
+    this._battleStarted = false;
+  }
 };
 window.addEventListener('DOMContentLoaded', ()=> BGM.init());
-/* 첫 클릭/터치 때 BGM 시작 (autoplay 정책 대응) */
-document.addEventListener('click', ()=>{
-  if(!BGM._started) BGM.play();
-}, { once: true });
+document.addEventListener('click', ()=>{ if(!BGM._battleStarted) BGM.play(); }, { once: true });
 </script>
 
 <!-- ════════════════════════════════════════
@@ -513,9 +575,9 @@ const CARD_TYPES = {
   paper:    { icon:'🖐️', name:'보',  label:'PAPER',    beats:'rock'     }
 };
 const TIER = {
-  normal: { label:'노멀', dmg:3, color:'var(--normal-c)' },
-  silver: { label:'실버', dmg:5, color:'var(--silver)'   },
-  gold:   { label:'골드', dmg:7, color:'var(--gold)'     }
+  normal: { label:'노멀', dmg:3, shield:0, color:'var(--normal-c)' },
+  silver: { label:'실버', dmg:5, shield:2, color:'var(--silver)'   },
+  gold:   { label:'골드', dmg:7, shield:4, color:'var(--gold)'     }
 };
 
 // 보스별 이미지와 대사 데이터 (원장님이 올리신 파일명으로 맞췄습니다)
@@ -534,12 +596,34 @@ const BOSS_INTRO_DATA = {
 function renderBossIntro() {
   const data = BOSS_INTRO_DATA[G.currentBossKey];
   const stage = STAGES[G.stageIdx];
+
+  // 적 덱 pip (인트로에서 보여줄 용)
+  const introPips = G.enemyDeck.map(c => {
+    const ct = CARD_TYPES[c.type];
+    const shd = TIER[c.tier].shield;
+    return `<div class="pip ${c.type} tier-${c.tier}" style="flex-shrink:0">
+      <div class="pip-icon">${ct.icon}</div>
+      <div class="pip-label">${c.type.slice(0,3).toUpperCase()}</div>
+      <div class="pip-dmg">${TIER[c.tier].dmg}</div>
+      ${shd>0?`<div class="pip-shield">🛡${shd}</div>`:''}
+    </div>`;
+  }).join('');
+
   $('app').innerHTML = `
     ${titleBarHTML(stage.label)}
     <div id="boss-intro">
       <div class="boss-img-frame" style="background-image: url('${data.img}')"></div>
       <div class="boss-dialogue">"${data.talk}"</div>
-      <button class="btn btn-primary" onclick="G.screen='battle'; render();">⚔️ 대결 시작!</button>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:10px;">
+        <button class="btn btn-primary" onclick="BGM.playBattle(); G.screen='battle'; render();">⚔️ 대결 시작!</button>
+        <button class="btn" style="background:none;border:1px solid var(--enemy);color:var(--enemy);padding:12px 18px;border-radius:9px;font-size:.82rem;"
+          onclick="this.parentNode.nextElementSibling.style.display=this.parentNode.nextElementSibling.style.display==='none'?'flex':'none'; this.textContent=this.textContent.includes('▼')?'덱 숨기기 ▲':'덱 보기 ▼';">
+          덱 보기 ▼
+        </button>
+      </div>
+      <div style="display:none;flex-wrap:wrap;gap:6px;justify-content:center;padding:8px 0;">
+        ${introPips}
+      </div>
     </div>`;
 }
 
@@ -652,9 +736,8 @@ function drawPlayerHand(){
    플레이어 핸드가 오픈이므로 아직 안 낸 카드를 정확히 파악 */
 function cpuPickCard(){
   if(G.enemyDrawPile.length===0){
-    /* ★ 원본 enemyDeck id 보존 방식으로 재구성 → pip 추적 유지 */
-    const discardIds = new Set(G.enemyDiscardPile.map(c=>c.id));
-    G.enemyDrawPile = shuffle(G.enemyDeck.filter(c=>discardIds.has(c.id)));
+    /* 적 덱 소진 → 원본 6장으로 완전 리셋 */
+    G.enemyDrawPile    = shuffle([...G.enemyDeck]);
     G.enemyDiscardPile = [];
     addLog('🔄 적이 덱을 재구성했습니다!','enemy-log');
   }
@@ -811,9 +894,22 @@ addLog(detailMsg, 'info');
 
   // 실제 HP 반영 및 로그 기록 로직
   const stage = STAGES[G.stageIdx];
-  if(res==='win'){ G.enemyHp = Math.max(0, G.enemyHp - TIER[pCard.tier].dmg); addLog(`승리! ${TIER[pCard.tier].dmg} 데미지!`,'win'); }
-  else if(res==='lose'){ G.playerHp = Math.max(0, G.playerHp - stage.enemyAtk); addLog(`패배! ${stage.enemyAtk} 데미지!`,'lose'); }
-  else { addLog(`무승부`,'draw'); }
+  if(res==='win'){
+    const dmg = TIER[pCard.tier].dmg;
+    G.enemyHp = Math.max(0, G.enemyHp - dmg);
+    addLog(`승리! ${dmg} 데미지!`,'win');
+  } else if(res==='lose'){
+    const rawDmg   = stage.enemyAtk;
+    const shield   = TIER[pCard.tier].shield;
+    const finalDmg = Math.max(0, rawDmg - shield);
+    G.playerHp = Math.max(0, G.playerHp - finalDmg);
+    if(shield > 0)
+      addLog(`패배! 적 공격 ${rawDmg} - 실드 ${shield} = ${finalDmg} 데미지!`,'lose');
+    else
+      addLog(`패배! ${rawDmg} 데미지!`,'lose');
+  } else {
+    addLog(`무승부`,'draw');
+  }
 
   G.usedInHand.push(handIdx);
   if(G.enemyHp<=0){ render(); setTimeout(triggerStageClear,500); return; }
@@ -877,7 +973,7 @@ function renderTitle(){
     <div id="title-screen">
       <div class="hero-ko" style="font-weight:900; letter-spacing:2px;">가위 바위 보 배틀</div>
       <div class="hero-en" style="opacity:0.8;">S-R-P &nbsp; BATTLE</div>
-      <div class="hero-ver">v2.5</div>
+      <div class="hero-ver">v5.0</div>
       
       <div class="rps-deco">
         <span>✌️</span><span>✊</span><span>🖐️</span>
@@ -916,19 +1012,20 @@ function renderBattle(){
 
   const pInfo = PERSONALITIES.find(p => p.key === G.cpuPersonality);
 
-  /* 적 pip (토글 시에만 표시) */
-const eDrawIds = new Set(G.enemyDrawPile.map(c => c.id));
-const allEnemyCards = [...G.enemyDrawPile, ...G.enemyDiscardPile];
-const enemyPips = allEnemyCards.map(c => {
-  const isRemaining = eDrawIds.has(c.id);
+  const eDrawIds = new Set(G.enemyDrawPile.map(c => c.id));
+  const allEnemyCards = [...G.enemyDrawPile, ...G.enemyDiscardPile];
+  const enemyPips = allEnemyCards.map(c => {
+    const isRemaining = eDrawIds.has(c.id);
+    const shd = TIER[c.tier].shield;
     return `<div class="pip ${c.type} tier-${c.tier} ${isRemaining ? '' : 'enemy-drawn'}">
       <div class="pip-icon">${CARD_TYPES[c.type].icon}</div>
       <div class="pip-label">${c.type.slice(0,3).toUpperCase()}</div>
       <div class="pip-dmg">${TIER[c.tier].dmg}</div>
+      ${shd>0?`<div class="pip-shield">🛡${shd}</div>`:''}
     </div>`;
   }).join('');
 
-  /* 적 남은 패 요약: drawPile만 (실시간 — 낸 카드 제외) */
+  /* 적 남은 패 요약 — drawPile만 (실시간) */
   const rem = {scissors:0, rock:0, paper:0};
   G.enemyDrawPile.forEach(c => rem[c.type]++);
   const remSummary = ['scissors','rock','paper'].map(t =>
@@ -936,19 +1033,21 @@ const enemyPips = allEnemyCards.map(c => {
                : `<span style="opacity:.2">${CARD_TYPES[t].icon}×0</span>`
   ).join('&nbsp;&nbsp;');
 
-  /* 손패 렌더링: 6장 오픈 */
+  /* 손패 렌더링: 6장 오픈 + 실드 표시 */
   let handHTML = '';
   if(!G.handDealt){
     handHTML = '<div class="card card-placeholder"></div>'.repeat(6);
   } else {
     handHTML = G.hand.map((c, i) => {
       const used = G.usedInHand.includes(i);
-      const ct = CARD_TYPES[c.type];
+      const ct   = CARD_TYPES[c.type];
+      const shd  = TIER[c.tier].shield;
       return `<div class="card ${c.type} tier-${c.tier} ${used ? 'used-card' : ''}"
                    onclick="playCard(${i})" style="cursor:${used ? 'default' : 'pointer'}">
         <div class="card-icon">${ct.icon}</div>
         <div class="card-name">${ct.label}</div>
         <div class="card-dmg">${TIER[c.tier].dmg} DMG</div>
+        ${shd > 0 ? `<div class="card-shield">🛡${shd}</div>` : ''}
       </div>`;
     }).join('');
   }
@@ -998,7 +1097,7 @@ const enemyPips = allEnemyCards.map(c => {
           <span style="font-size:1rem; display:flex; gap:8px; align-items:center;">
             ${remSummary}
           </span>
-          ${G.enemyDrawPile.length===0 ? '<span class="reshuffle-badge">재구성 대기!</span>' : `<span style="font-size:.7rem;color:var(--text-dim)">(${G.enemyDrawPile.length}장 남음)</span>`}
+          ${G.enemyDrawPile.length===0 ? '' : ''}
         </div>
         <!-- 토글 버튼 -->
         <button onclick="G.enemyDeckOpen=!G.enemyDeckOpen; render();"
@@ -1134,6 +1233,7 @@ function renderRestStop(){
       }).join('')}
     </div>`:'';
   const canConfirm=bSel||(uSel&&restUpgradeIdx!==null);
+  BGM.playRest();
   $('app').innerHTML=`
     ${titleBarHTML('⛺ 휴게소')}
     <div class="panel" style="padding:22px 20px">
@@ -1173,6 +1273,7 @@ function confirmRestStop(){
   }
   restChoice=null; restUpgradeIdx=null;
   initStage(G.stageIdx+1,G.playerHp);
+  BGM.playBattle();
   G.screen='boss_intro'; render();
 }
 
