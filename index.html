@@ -555,11 +555,11 @@ playGameOver(){
   if(vic){ vic.volume=0.4; vic.currentTime=0; vic.play().catch(()=>{}); }
 },
   
- stop(){
+stop(){
     if(this.battle){ this.battle.pause(); this.battle.currentTime=0; }
     if(this.rest)  { this.rest.pause(); }
     
-    // 추가할 부분: 게임오버와 승리 음악도 강제로 멈추게 합니다.
+    // 게임오버 및 승리 음악도 확실히 끕니다
     const go = document.getElementById('bgm-gameover');
     if(go){ go.pause(); go.currentTime = 0; }
     const vic = document.getElementById('bgm-victory');
@@ -1386,7 +1386,7 @@ function renderGameOver(){
       <div style="font-size:.8rem;color:var(--text-dim);line-height:1.8;margin-bottom:20px">
         ${STAGES[G.stageIdx].enemyIcon} ${STAGES[G.stageIdx].enemyName}에게 쓰러졌습니다.<br>전략을 다듬고 다시 도전하세요!
       </div>
-      <button class="btn btn-primary" onclick="startGame()">🔄 처음부터</button>
+     <button class="btn btn-primary" onclick="location.reload()">🏠 처음 화면으로</button>
     </div>`;
 }
 
