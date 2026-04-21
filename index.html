@@ -555,9 +555,16 @@ playGameOver(){
   if(vic){ vic.volume=0.4; vic.currentTime=0; vic.play().catch(()=>{}); }
 },
   
-  stop(){
+ stop(){
     if(this.battle){ this.battle.pause(); this.battle.currentTime=0; }
-    if(this.rest)  { this.rest.pause(); }  // 위치 유지 — currentTime 리셋 안 함
+    if(this.rest)  { this.rest.pause(); }
+    
+    // 추가할 부분: 게임오버와 승리 음악도 강제로 멈추게 합니다.
+    const go = document.getElementById('bgm-gameover');
+    if(go){ go.pause(); go.currentTime = 0; }
+    const vic = document.getElementById('bgm-victory');
+    if(vic){ vic.pause(); vic.currentTime = 0; }
+
     this._current = null;
     this._battleStarted = false;
   }
