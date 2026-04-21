@@ -450,6 +450,7 @@ background-size: contain;      /* cover 대신 contain으로 변경 */
      ════════════════════════════════════════ -->
 <audio id="bgm-track" src="backgroundmusic.mp3" loop preload="none"></audio>
 <audio id="bgm-rest"  src="PixelBudgetLoop.mp3"  loop preload="none"></audio>
+  <audio id="bgm-gameover" src="GameOverScreen.mp3" preload="none"></audio>
   
 <div id="clash-overlay">
   <div class="clash-stage">
@@ -527,6 +528,14 @@ const BGM = {
     if(!this._battleStarted) this.playBattle();
   },
 
+playGameOver(){
+  if(this.battle){ this._fade(this.battle, this.battle.volume, 0, 800, ()=>{ this.battle.pause(); }); }
+  if(this.rest)  { this._fade(this.rest, this.rest.volume, 0, 800, ()=>{ this.rest.pause(); }); }
+  this._current = null;
+  const go = document.getElementById('bgm-gameover');
+  if(go){ go.volume=0.4; go.currentTime=0; go.play().catch(()=>{}); }
+},
+  
   stop(){
     if(this.battle){ this.battle.pause(); this.battle.currentTime=0; }
     if(this.rest)  { this.rest.pause(); }  // 위치 유지 — currentTime 리셋 안 함
@@ -1286,6 +1295,10 @@ function confirmRestStop(){
 }
 
 /* ⑤ GAME OVER */
+  function renderGameOver(){
+  BGM.playGameOver();  // ← 추가
+  $('app').innerHTML=`
+  
 function renderGameOver(){
   $('app').innerHTML=`
     ${titleBarHTML()}
