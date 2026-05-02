@@ -29,9 +29,9 @@
   --muted:       #3a4060;
   --text:        #dde3f5;
   --text-dim:    #6a75a0;
-  --scissors:    #f0a030;
+  --scissors:    #6090f0;
   --rock:        #6090f0;
-  --paper:       #60d870;
+  --paper:       #6090f0;
   --silver:      #b8d0f0;
   --gold:        #ffd060;
   --normal-c:    #8898b8;
@@ -108,6 +108,509 @@ body::before {
 .pb-aggressive { border-color:var(--danger);  color:var(--danger);  background:rgba(240,74,106,.1); }
 .pb-counter    { border-color:var(--enemy);   color:var(--enemy);   background:rgba(255,107,138,.08); }
 .pb-careful    { border-color:var(--accent2); color:var(--accent2); background:rgba(74,240,200,.08); }
+.pb-master-aggressive { border-color:#ff9050; color:#ff9050; background:rgba(255,144,80,.1); }
+.pb-master-counter    { border-color:#b070ff; color:#b070ff; background:rgba(176,112,255,.1); }
+.pb-master-careful    { border-color:#5fd8e8; color:#5fd8e8; background:rgba(95,216,232,.1); }
+.pb-chaotic           { border-color:#ffd060; color:#ffd060; background:rgba(255,208,96,.1); }
+.pb-analyst           { border-color:#60c8ff; color:#60c8ff; background:rgba(96,200,255,.1); }
+
+/* ═══ CHARACTER SELECT (대격변 v6.0) ═══ */
+.char-grid { display:grid; grid-template-columns:1fr; gap:10px; }
+.char-card {
+  background:var(--bg2); border:2px solid var(--border);
+  border-radius:10px; padding:12px 14px;
+  cursor:pointer; transition:all .2s;
+}
+.char-card:hover { transform:translateY(-2px); border-color:var(--accent2); }
+.char-card.selected {
+  border-color:var(--accent); background:rgba(232,200,74,.06);
+  box-shadow:0 0 14px rgba(232,200,74,.18);
+}
+.char-head { display:flex; align-items:center; gap:8px; margin-bottom:5px; }
+.char-icon { font-size:1.4rem; }
+.char-name { font-weight:800; font-size:1rem; color:var(--text); letter-spacing:-.3px; }
+.char-summary { font-size:.72rem; color:var(--text-dim); margin-bottom:9px; line-height:1.5; }
+/* 111번 라인 부근 */
+.char-deck { 
+  display: grid; 
+  grid-template-columns: repeat(6, 1fr); /* 6열 고정 */
+  gap: 4px; 
+}
+.char-pip { 
+  width: 100%; /* 부모 그리드 너비에 맞춤 */
+  max-width: 42px; 
+  height: 54px; 
+}
+.char-pip .pip-dmg { font-size:.72rem; bottom:3px; right:4px; }
+.char-pip .pip-shield { font-size:.6rem; bottom:3px; left:3px; }
+
+/* ⚡ 사이버펑크 화면 글리치(깨짐) 트랜지션 */
+@keyframes glitch-anim {
+  0% { filter: contrast(1) hue-rotate(0deg); transform: translate(0) scale(1); opacity: 1; }
+  20% { filter: contrast(2) hue-rotate(90deg); transform: translate(-10px, 5px) scale(1.02); opacity: 0.8; }
+  40% { filter: contrast(1.5) hue-rotate(-90deg); transform: translate(10px, -5px) scale(0.98); opacity: 0.9; }
+  60% { filter: contrast(2.5) hue-rotate(180deg); transform: translate(-5px, 10px) scale(1.05); opacity: 0.5; }
+  80% { filter: contrast(1.5) hue-rotate(-180deg); transform: translate(5px, -10px) scale(0.95); opacity: 0.8; }
+  100% { filter: contrast(1) hue-rotate(0deg); transform: translate(0) scale(1); opacity: 1; }
+}
+.glitch-transition { animation: glitch-anim 0.4s cubic-bezier(.25, .46, .45, .94) both; }
+
+/* 📖 엔딩 시네마틱 텍스트 */
+.ending-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  text-align: center;
+  font-family: var(--font-main);
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--text);
+  line-height: 2.2;
+  letter-spacing: 2px;
+  opacity: 0;
+  transition: opacity 2s ease-in-out; /* 서서히 페이드 인/아웃 */
+  pointer-events: none;
+}
+.ending-text.show { opacity: 1; pointer-events: auto; }
+
+
+
+/* ✨ 스킬(패시브) 발동 팝업 애니메이션 */
+@keyframes skillNotice {
+  0% { opacity: 0; transform: scale(0.3) translateY(20px); filter: brightness(2); }
+  15% { opacity: 1; transform: scale(1.2) translateY(-10px); filter: brightness(1.5); }
+  30% { transform: scale(1) translateY(0); filter: brightness(1); }
+  80% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-40px); }
+}
+
+.skill-notice {
+  position: fixed;
+  top: 45%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10002;
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 1.8rem;
+  color: #fff;
+  text-shadow: 0 0 15px rgba(255,255,255,0.8), 2px 2px 4px rgba(0,0,0,0.5);
+  pointer-events: none;
+  animation: skillNotice 1.5s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+  white-space: nowrap;
+}
+
+/* 캐릭터별 전용 글로우(Glow) */
+.skill-karona { text-shadow: 0 0 20px var(--accent); color: var(--accent); }
+.skill-barber { text-shadow: 0 0 20px var(--scissors); color: #fff; }
+.skill-quarrier { text-shadow: 0 0 20px var(--silver); color: #e0e0e0; }
+.skill-tailor { text-shadow: 0 0 20px var(--win); color: var(--win); }
+
+
+
+
+/* ═══ 🌙 뒷거래 (대격변 v6.0) ═══ */
+.deal-panel { background:linear-gradient(180deg, var(--panel) 0%, #1a0f1f 100%); }
+.dealer-img-frame {
+  width:140px; height:140px; margin:0 auto;
+  border-radius:50%; border:2px solid var(--accent);
+  background-size:cover; background-position:center;
+  background-color:var(--bg2);
+  box-shadow:0 0 18px rgba(232,200,74,.25);
+}
+.deal-card-grid {
+  display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;
+}
+.deal-card-option {
+  background:var(--bg2); border:2px solid var(--border);
+  border-radius:10px; padding:12px 6px; text-align:center;
+  cursor:pointer; transition:all .2s;
+  min-height:100px; display:flex; flex-direction:column; justify-content:center; gap:4px;
+}
+.deal-card-option:hover { transform:translateY(-2px); border-color:var(--accent); }
+.deal-card-option.selected {
+  border-color:var(--accent); background:rgba(232,200,74,.08);
+  box-shadow:0 0 14px rgba(232,200,74,.25);
+}
+.deal-card-option .dco-icon { font-size:1.8rem; line-height:1; }
+.deal-card-option .dco-name { font-size:.7rem; font-weight:700; }
+.deal-card-option .dco-stats {
+  font-family:'Rajdhani',sans-serif; font-size:.78rem;
+  color:var(--text-dim); letter-spacing:.5px;
+}
+.deal-deck-card { cursor:pointer; transition:all .2s; }
+.deal-deck-card:hover { transform:translateY(-3px); }
+.deal-deck-card.selected {
+  border-color:var(--danger) !important;
+  box-shadow:0 0 14px rgba(240,74,106,.4) !important;
+}
+
+/* 🎴 거래상 카드 뒷면 (대격변 v7.1) */
+.deal-card-back {
+  background: linear-gradient(135deg, #2a1a3a 0%, #1a0f22 100%) !important;
+  border-color: var(--purple) !important;
+  cursor: default !important;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 💗 보스 인트로 HP 비교 (대격변 v7.1) */
+.intro-hp-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 10px 8px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.intro-hp-block {
+  flex: 1;
+  text-align: center;
+  padding: 4px 6px;
+}
+.intro-hp-label {
+  font-size: .68rem;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.intro-hp-value {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: .5px;
+}
+.intro-hp-vs {
+  font-family: 'Black Han Sans', sans-serif;
+  color: var(--accent);
+  font-size: .85rem;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+}
+.deal-card-back::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(45deg, transparent 0 6px, rgba(176,112,255,.08) 6px 12px);
+  pointer-events: none;
+}
+.deal-card-back .dco-back-icon {
+  font-size: 1.8rem;
+  filter: drop-shadow(0 0 6px rgba(176,112,255,.5));
+}
+.deal-card-back .dco-back-text {
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: .9rem;
+  color: var(--purple);
+  letter-spacing: 2px;
+  margin-top: 4px;
+}
+.deal-card-back:hover { transform: none !important; }
+
+@keyframes deal-card-flip {
+  0% { transform: rotateY(180deg); opacity: 0; }
+  50% { transform: rotateY(90deg); opacity: .5; }
+  100% { transform: rotateY(0deg); opacity: 1; }
+}
+.deal-card-just-revealed {
+  animation: deal-card-flip .5s ease-out;
+}
+
+/* 🌈 변종 카드 — 무지개 글로우 */
+@keyframes variant-shimmer {
+  0%, 100% { box-shadow: 0 0 8px rgba(255,126,184,.4); }
+  25%      { box-shadow: 0 0 12px rgba(255,200,80,.5); }
+  50%      { box-shadow: 0 0 12px rgba(94,255,126,.5); }
+  75%      { box-shadow: 0 0 12px rgba(94,220,255,.5); }
+}
+.deal-card-variant {
+  border-image: linear-gradient(45deg,#ff5e5e,#ffae5e,#fff85e,#5eff7e,#5edcff,#bf5eff) 1 !important;
+  border-width: 2.5px !important;
+  border-style: solid !important;
+  background: linear-gradient(135deg, rgba(40,15,40,.95), rgba(20,15,40,.95)) !important;
+  animation: variant-shimmer 3s ease-in-out infinite;
+}
+.deal-card-variant.selected {
+  box-shadow: 0 0 18px rgba(255,126,184,.7) !important;
+}
+
+/* 🌈 변종 카드 글로벌 적용 (내 덱, 손패, 격돌 화면 모두 통일) */
+.pip.tier-variant, .pip-variant {
+  border-image: linear-gradient(45deg,#ff5e5e,#ffae5e,#fff85e,#5eff7e,#5edcff,#bf5eff) 1 !important;
+  border-width: 2px !important;
+  border-style: solid !important;
+  background: linear-gradient(135deg, rgba(40,15,40,.8), rgba(20,15,40,.8)) !important;
+}
+.pip.tier-variant .pip-dmg { color: #ff7eb8 !important; }
+
+/* 손패(큰 카드)로 들어왔을 때의 연출 */
+.card.tier-variant {
+  border-image: linear-gradient(45deg,#ff5e5e,#ffae5e,#fff85e,#5eff7e,#5edcff,#bf5eff) 1 !important;
+  border-width: 2.5px !important;
+  border-style: solid !important;
+  background: linear-gradient(135deg, rgba(40,15,40,.95), rgba(20,15,40,.95)) !important;
+  animation: variant-shimmer 3s ease-in-out infinite;
+}
+.card.tier-variant .card-dmg { color: #ff7eb8 !important; }
+.card.tier-variant::after {
+  content:'변종'; position:absolute; top:5px; right:6px;
+  font-size:.44rem; letter-spacing:1px; color:#ff7eb8; font-family:'Black Han Sans', sans-serif;
+}
+
+/* 중앙에서 적과 맞붙을 때(Clash)의 연출 */
+.clash-card.variant {
+  border-image: linear-gradient(45deg,#ff5e5e,#ffae5e,#fff85e,#5eff7e,#5edcff,#bf5eff) 1 !important;
+  border-width: 3px !important;
+  border-style: solid !important;
+  background: linear-gradient(135deg, rgba(40,15,40,.95), rgba(20,15,40,.95)) !important;
+  animation: variant-shimmer 3s ease-in-out infinite;
+}
+
+/* 🌈 강화 화면 — 변종 카드 표시 */
+.upg-card.variant-card {
+  border: 2px solid transparent !important;
+  border-image: linear-gradient(45deg,#ff5e5e,#ffae5e,#fff85e,#5eff7e,#5edcff,#bf5eff) 1 !important;
+  background: linear-gradient(135deg, rgba(40,15,40,.6), rgba(20,15,40,.6)) !important;
+}
+
+/* ⚖️ 캐릭터 패시브 표시 (캐릭터 선택 화면) */
+.char-passive {
+  margin-top: 8px;
+  padding: 7px 9px;
+  background: rgba(232,200,74,.06);
+  border: 1px dashed var(--accent);
+  border-radius: 6px;
+}
+.char-passive-label {
+  font-size: .72rem;
+  color: var(--accent);
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.char-passive-desc {
+  font-size: .68rem;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+
+/* 🎯 전투 화면 — 패시브 항상 표시 바 */
+.player-passive-bar {
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: rgba(232,200,74,.05);
+  border: 1px dashed var(--accent);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.player-passive-bar .ppb-label {
+  font-size: .68rem;
+  color: var(--accent);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.player-passive-bar .ppb-desc {
+  font-size: .65rem;
+  color: var(--text-dim);
+  line-height: 1.3;
+}
+
+/* ═══ 🗺️ 플로팅 지도 버튼 + 모달 (대격변 v7.0) ═══ */
+#floating-map-btn {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: var(--bg2);
+  border: 2px solid var(--accent);
+  color: var(--accent);
+  font-size: 1.3rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 14px rgba(232,200,74,.3);
+  z-index: 900;
+  transition: all .2s;
+  padding: 0;
+}
+#floating-map-btn:hover { transform: scale(1.06); box-shadow: 0 0 18px rgba(232,200,74,.5); }
+#floating-map-btn:active { transform: scale(.95); }
+
+#map-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 950;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 12px;
+}
+.map-modal-bg {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.78);
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+}
+.map-modal-panel {
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  width: 100%;
+  max-width: 400px;
+  max-height: 90vh;
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0,0,0,.6);
+  display: flex;
+  flex-direction: column;
+}
+.map-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+}
+.map-modal-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: .9rem;
+  transition: all .15s;
+}
+.map-modal-close:hover { color: var(--text); border-color: var(--accent); }
+.map-modal-body {
+  padding: 8px;
+  overflow-y: auto;
+  background: #0d0d14;
+}
+.map-node-clickable { cursor: pointer; transition: opacity .2s; }
+.map-node-clickable:hover { opacity: .85; }
+.map-node-info { cursor: pointer; transition: filter .2s; }
+.map-node-info:hover { filter: brightness(1.2); }
+
+/* 🔍 적 정보 팝업 */
+#enemy-detail-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 970;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 12px;
+}
+.enemy-detail-bg {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.82);
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+}
+.enemy-detail-panel {
+  position: relative;
+  background: var(--panel);
+  border: 2px solid var(--danger);
+  border-radius: 14px;
+  width: 100%;
+  max-width: 380px;
+  max-height: 90vh;
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgba(240,74,106,.3);
+  display: flex;
+  flex-direction: column;
+}
+.enemy-detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+}
+.enemy-detail-body {
+  padding: 14px 16px;
+  overflow-y: auto;
+}
+.enemy-detail-img {
+  width: 100px;
+  height: 100px;
+  border-radius: 10px;
+  border: 2px solid var(--danger);
+  background-size: 130%;
+  background-position: center 20%;
+  background-color: var(--bg2);
+  flex-shrink: 0;
+  box-shadow: 0 0 12px rgba(240,74,106,.25);
+}
+
+/* 💥 화면 흔들림 효과 */
+@keyframes shakeHard {
+  0% { transform: translate(2px, 2px) rotate(0deg); }
+  20% { transform: translate(-3px, -2px) rotate(-1deg); }
+  40% { transform: translate(3px, 0px) rotate(1deg); }
+  60% { transform: translate(-2px, 3px) rotate(0deg); }
+  80% { transform: translate(2px, -1px) rotate(-1deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+@keyframes shakeLight {
+  0% { transform: translate(1px, 1px); }
+  25% { transform: translate(-1px, -1px); }
+  50% { transform: translate(1px, 0px); }
+  75% { transform: translate(-1px, 1px); }
+  100% { transform: translate(0, 0); }
+}
+.shake-hard { animation: shakeHard 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+.shake-light { animation: shakeLight 0.3s cubic-bezier(.36,.07,.19,.97) both; }
+
+/* 💥 데미지 팝업 숫자 */
+@keyframes popUpDmg {
+  0% { opacity: 0; transform: translateY(0) scale(0.5); }
+  20% { opacity: 1; transform: translateY(-20px) scale(1.3); }
+  80% { opacity: 1; transform: translateY(-40px) scale(1); }
+  100% { opacity: 0; transform: translateY(-50px) scale(0.8); }
+}
+.dmg-popup {
+  position: fixed; /* 💡 부모 상자의 overflow 설정을 무시하고 화면 최상단에 띄움 */
+  font-family: var(--font-main); /* 💡 뭉개지지 않는 선명한 폰트 적용 */
+  font-weight: 900;
+  font-size: 3.2rem;
+  pointer-events: none;
+  z-index: 11000; /* 💡 다른 어떤 UI보다 위에 오도록 설정 */
+  animation: popUpDmg 1s ease-out forwards;
+  text-shadow: 0 0 15px rgba(0,0,0,0.8), 3px 3px 0px #000;
+  transform: translateX(-50%); /* 💡 중앙 정렬 기준점 */
+  text-align: center;
+}
+
+/* ❤️ 빈사 상태 (HP 25% 미만) 붉은 아우라 */
+@keyframes pulseDanger {
+  0% { box-shadow: 0 0 8px rgba(240,74,106,0.3); border-color: rgba(240,74,106,0.4); }
+  50% { box-shadow: 0 0 25px rgba(240,74,106,0.85); border-color: rgba(240,74,106,1); }
+  100% { box-shadow: 0 0 8px rgba(240,74,106,0.3); border-color: rgba(240,74,106,0.4); }
+}
+.hp-danger {
+  animation: pulseDanger 0.8s infinite !important;
+  border: 2px solid var(--danger) !important;
+  background: rgba(240,74,106,0.05);
+}
 
 /* ═══ PANEL ═══ */
 .panel { background:var(--panel); border:1px solid var(--border); border-radius:11px; padding:12px 16px; }
@@ -340,8 +843,17 @@ body::before {
 /* ═══ TITLE SCREEN ═══ */
 #title-screen { text-align:center; padding:34px 0; min-height:90vh; display:flex; flex-direction:column; align-items:center; justify-content:center; }
 #boss-intro { text-align:center; padding:20px 20px; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:85vh; }
-.hero-ko  { font-family:'Black Han Sans',sans-serif; font-size:2.5rem; color:var(--accent); text-shadow:0 0 40px rgba(232,200,74,.6); letter-spacing:4px; margin-bottom:4px; }
-.hero-en  { font-family:'Orbitron',sans-serif; font-weight:900; font-size:1rem; letter-spacing:8px; color:var(--accent2); text-shadow:0 0 16px rgba(74,240,200,.4); margin-bottom:2px; }
+
+/* 영문 타이틀: 상단 배치, 대형, 사이언 네온 효과 */
+.hero-en { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 2.8rem; letter-spacing: 2px; color: #00f3ff; text-shadow: 0 0 10px rgba(0, 243, 255, 0.8), 0 0 20px rgba(0, 243, 255, 0.4); margin-bottom: 5px; animation: glow-cyan 2s ease-in-out infinite alternate; }
+
+/* 한글 타이틀: 하단 배치, 중형, 마젠타 네온 효과 */
+.hero-ko { font-family: var(--font-main); font-weight: 800; font-size: 1.1rem; color: #4af0c8; text-shadow: 0 0 8px rgba(255, 0, 85, 0.6); letter-spacing: 10px; margin-top: -5px; margin-bottom: 30px; }
+
+/* 비활성화된 버튼 및 네온 애니메이션 추가 */
+.btn-disabled { background: #1a1a2e !important; color: #444 !important; border: 1px solid #333 !important; cursor: not-allowed !important; opacity: 0.6; box-shadow: none !important; transform: none !important; }
+@keyframes glow-cyan { from { text-shadow: 0 0 10px rgba(0, 243, 255, 0.5); } to { text-shadow: 0 0 25px rgba(0, 243, 255, 0.9); } }
+
 .hero-ver { font-family:'Orbitron',sans-serif; font-size:.6rem; letter-spacing:5px; color:var(--muted); margin-bottom:18px; }
 .rps-deco { font-size:3rem; margin:12px 0; display:flex; justify-content:center; gap:22px; }
 .rps-deco span { animation:float 3s ease-in-out infinite; }
@@ -461,8 +973,10 @@ background-size: contain;      /* cover 대신 contain으로 변경 */
      ════════════════════════════════════════ -->
 <audio id="bgm-track" src="backgroundmusic.mp3" loop preload="none"></audio>
 <audio id="bgm-rest"  src="PixelBudgetLoop.mp3"  loop preload="none"></audio>
+<audio id="bgm-boss"  src="finalbossmoon.mp3" loop preload="none"></audio>
+<audio id="bgm-deal"  src="undergrounddealer.mp3" loop preload="none"></audio>
 <audio id="bgm-gameover" src="GameOverScreen.mp3" preload="none"></audio>
-<audio id="bgm-victory" src="ClearParade.mp3" preload="none"></audio>
+<audio id="bgm-ending" src="endingmusic.mp3" preload="none"></audio>
   
 <div id="clash-overlay">
   <div class="clash-stage">
@@ -482,12 +996,18 @@ background-size: contain;      /* cover 대신 contain으로 변경 */
 const BGM = {
   battle: null,
   rest:   null,
+  boss:   null,
+  deal:   null,
+  ending: null,
   _battleStarted: false,
-  _current: null,   // 'battle' | 'rest' | null
+  _current: null,
 
   init(){
     this.battle = document.getElementById('bgm-track');
     this.rest   = document.getElementById('bgm-rest');
+    this.boss   = document.getElementById('bgm-boss');
+    this.deal   = document.getElementById('bgm-deal');
+    this.ending = document.getElementById('bgm-ending');
     if(this.rest) this.rest.volume = 0.35;
   },
 
@@ -509,10 +1029,9 @@ const BGM = {
   /* 전투 BGM — 위치 기억, 페이드인 */
   playBattle(){
     if(this._current === 'battle') return;
-    // 휴게소 BGM 페이드아웃
-    if(this._current === 'rest' && this.rest){
-      this._fade(this.rest, this.rest.volume, 0, 800, ()=>{ this.rest.pause(); });
-    }
+    if(this._current === 'rest' && this.rest){ this._fade(this.rest, this.rest.volume, 0, 800, ()=>{ this.rest.pause(); }); }
+    if(this._current === 'boss' && this.boss){ this._fade(this.boss, this.boss.volume, 0, 800, ()=>{ this.boss.pause(); }); }
+    if(this._current === 'deal' && this.deal){ this._fade(this.deal, this.deal.volume, 0, 800, ()=>{ this.deal.pause(); }); }
     this._current = 'battle';
     if(!this.battle) return;
     this.battle.volume = 0;
@@ -521,13 +1040,26 @@ const BGM = {
     this._fade(this.battle, 0, 0.35, 1200);
   },
 
+  /* 보스 BGM (문동진 전용) — 페이드인 */
+  playBoss(){
+    if(this._current === 'boss') return;
+    if(this._current === 'battle' && this.battle){ this._fade(this.battle, this.battle.volume, 0, 800, ()=>{ this.battle.pause(); }); }
+    if(this._current === 'rest' && this.rest){ this._fade(this.rest, this.rest.volume, 0, 800, ()=>{ this.rest.pause(); }); }
+    if(this._current === 'deal' && this.deal){ this._fade(this.deal, this.deal.volume, 0, 800, ()=>{ this.deal.pause(); }); }
+    this._current = 'boss';
+    if(!this.boss) return;
+    this.boss.volume = 0;
+    this.boss.play().catch(()=>{});
+    this._battleStarted = true;
+    this._fade(this.boss, 0, 0.35, 1200);
+  },
+
   /* 휴게소 BGM — 전투 위치 저장 후 전환 */
   playRest(){
     if(this._current === 'rest') return;
-    // 전투 BGM 페이드아웃 (위치는 유지)
-    if(this._current === 'battle' && this.battle){
-      this._fade(this.battle, this.battle.volume, 0, 800, ()=>{ this.battle.pause(); });
-    }
+    if(this._current === 'battle' && this.battle){ this._fade(this.battle, this.battle.volume, 0, 800, ()=>{ this.battle.pause(); }); }
+    if(this._current === 'boss' && this.boss){ this._fade(this.boss, this.boss.volume, 0, 800, ()=>{ this.boss.pause(); }); }
+    if(this._current === 'deal' && this.deal){ this._fade(this.deal, this.deal.volume, 0, 800, ()=>{ this.deal.pause(); }); }
     this._current = 'rest';
     if(!this.rest) return;
     this.rest.volume = 0;
@@ -535,31 +1067,59 @@ const BGM = {
    this._fade(this.rest, 0, 0.35, 1200);
   },
 
+  /* 🌙 뒷거래 BGM — 페이드인 */
+  playDeal(){
+    if(this._current === 'deal') return;
+    if(this._current === 'battle' && this.battle){ this._fade(this.battle, this.battle.volume, 0, 800, ()=>{ this.battle.pause(); }); }
+    if(this._current === 'rest' && this.rest){ this._fade(this.rest, this.rest.volume, 0, 800, ()=>{ this.rest.pause(); }); }
+    if(this._current === 'boss' && this.boss){ this._fade(this.boss, this.boss.volume, 0, 800, ()=>{ this.boss.pause(); }); }
+    this._current = 'deal';
+    if(!this.deal) return;
+    this.deal.volume = 0;
+    this.deal.play().catch(()=>{});
+    this._fade(this.deal, 0, 0.35, 1200);
+  },
+
   /* 처음 시작 (첫 클릭) */
   play(){
     if(!this._battleStarted) this.playBattle();
   },
 
-playGameOver(){
-  if(this.battle){ this._fade(this.battle, this.battle.volume, 0, 800, ()=>{ this.battle.pause(); }); }
-  if(this.rest)  { this._fade(this.rest, this.rest.volume, 0, 800, ()=>{ this.rest.pause(); }); }
-  this._current = null;
-  const go = document.getElementById('bgm-gameover');
-  if(go){ go.volume=0.4; go.currentTime=0; go.play().catch(()=>{}); }
-},
+  playGameOver(){
+    if(this.battle){ this._fade(this.battle, this.battle.volume, 0, 800, ()=>{ this.battle.pause(); }); }
+    if(this.rest)  { this._fade(this.rest, this.rest.volume, 0, 800, ()=>{ this.rest.pause(); }); }
+    if(this.boss)  { this._fade(this.boss, this.boss.volume, 0, 800, ()=>{ this.boss.pause(); }); }
+    this._current = null;
+    const go = document.getElementById('bgm-gameover');
+    if(go){ go.volume=0.4; go.currentTime=0; go.play().catch(()=>{}); }
+  },
+
   playVictory(){
-  if(this.battle){ this._fade(this.battle, this.battle.volume, 0, 800, ()=>{ this.battle.pause(); }); }
-  if(this.rest)  { this._fade(this.rest, this.rest.volume, 0, 800, ()=>{ this.rest.pause(); }); }
-  this._current = null;
-  const vic = document.getElementById('bgm-victory');
-  if(vic){ vic.volume=0.4; vic.currentTime=0; vic.play().catch(()=>{}); }
-},
-  
-stop(){
+    if(this.battle){ this._fade(this.battle, this.battle.volume, 0, 800, ()=>{ this.battle.pause(); }); }
+    if(this.rest)  { this._fade(this.rest, this.rest.volume, 0, 800, ()=>{ this.rest.pause(); }); }
+    if(this.boss)  { this._fade(this.boss, this.boss.volume, 0, 800, ()=>{ this.boss.pause(); }); }
+    this._current = null;
+    const vic = document.getElementById('bgm-victory');
+    if(vic){ vic.volume=0.4; vic.currentTime=0; vic.play().catch(()=>{}); }
+  },
+
+  playEnding(){ 
+    this.stop(); 
+    this._current = 'ending';
+    if(this.ending){
+      this.ending.volume = 0;
+      this.ending.currentTime = 0;
+      this.ending.play().catch(()=>{});
+      this._fade(this.ending, 0, 0.4, 1500); 
+    }
+  },
+
+  stop(){
     if(this.battle){ this.battle.pause(); this.battle.currentTime=0; }
     if(this.rest)  { this.rest.pause(); }
+    if(this.boss)  { this.boss.pause(); this.boss.currentTime=0; }
+    if(this.ending){ this.ending.pause(); this.ending.currentTime=0; }
     
-    // 게임오버 및 승리 음악도 확실히 끕니다
     const go = document.getElementById('bgm-gameover');
     if(go){ go.pause(); go.currentTime = 0; }
     const vic = document.getElementById('bgm-victory');
@@ -568,7 +1128,8 @@ stop(){
     this._current = null;
     this._battleStarted = false;
   }
-};
+}; // 👈 이 괄호 하나가 빠져서 화면 전체가 먹통이 됐던 겁니다!
+
 window.addEventListener('DOMContentLoaded', ()=> BGM.init());
 document.addEventListener('click', ()=>{ if(!BGM._battleStarted) BGM.play(); }, { once: true });
 </script>
@@ -606,7 +1167,22 @@ const SFX = (()=>{
     drawSfx(){ const x=c(), t=x.currentTime; osc(440,'sine',t,.12,.1,x); osc(440,'sine',t+.14,.12,.08,x); },
     heal(){  const x=c(), t=x.currentTime; [880,1100,1320].forEach((f,i)=>osc(f,'sine',t+i*.07,.2,.1,x)); },
     upgrade(){ const x=c(), t=x.currentTime; [440,554,659,880,1108].forEach((f,i)=>osc(f,'triangle',t+i*.07,.3,.1,x)); },
-    stageClear(){ const x=c(), t=x.currentTime; [523,659,784,659,784,1047].forEach((f,i)=>osc(f,'triangle',t+i*.1,.3,.11,x)); }
+    stageClear(){ const x=c(), t=x.currentTime; [523,659,784,659,784,1047].forEach((f,i)=>osc(f,'triangle',t+i*.1,.3,.11,x)); },
+    /* 🌙 뒷거래 — 터벅터벅 발걸음 (낮은 노이즈 + 둔탁한 베이스) */
+    deal(){
+      const x=c(), t=x.currentTime;
+      [0, .25, .5, .75].forEach(d => {
+        noise(t+d, .12, .18, 200, x);
+        osc(60, 'sine', t+d, .14, .2, x);
+      });
+    },
+    /* 💔 HP 손실 — 짧고 아픈 톤 */
+    hpLoss(){
+      const x=c(), t=x.currentTime;
+      osc(330,'sawtooth',t,.18,.2,x);
+      osc(165,'square',t+.05,.22,.18,x);
+      noise(t,.18,.12,500,x);
+    }
   };
 })();
 </script>
@@ -623,8 +1199,44 @@ const CARD_TYPES = {
 const TIER = {
   normal: { label:'노멀', dmg:3, shield:0, color:'var(--normal-c)' },
   silver: { label:'실버', dmg:5, shield:2, color:'var(--silver)'   },
-  gold:   { label:'골드', dmg:7, shield:4, color:'var(--gold)'     }
+  gold:   { label:'골드', dmg:7, shield:4, color:'var(--gold)'     },
+  variant:{ label:'변종', dmg:0, shield:0, color:'#ff7eb8' }  // 실제 값은 카드별로 다름 (cardDmg/cardShield 사용)
 };
+
+/* 🌈 변종 카드 타입별 수치 (대격변 v8.0) */
+const VARIANT_STATS = {
+  scissors: { dmg:10, shield:0 },  // 폭딜 가위
+  rock:     { dmg:3,  shield:5 },  // 방어 바위
+  paper:    { dmg:6,  shield:3 }   // 균형 보
+};
+
+/* 카드의 실제 공격력/실드 — 변종은 별도 처리, 패시브 보정 포함 */
+function cardDmg(c){
+  if(c.tier === 'variant') return VARIANT_STATS[c.type]?.dmg ?? 0;
+  return TIER[c.tier].dmg;
+}
+function cardShield(c){
+  let base;
+  if(c.tier === 'variant') base = VARIANT_STATS[c.type]?.shield ?? 0;
+  else base = TIER[c.tier].shield;
+  // ⛏️ 대리암 패시브: 모든 바위 카드에 실드 +2
+  if(c.type === 'rock' && G.character === 'quarrier') base += 2;
+  return base;
+}
+
+/* 🔍 미리보기용: 특정 캐릭터의 패시브를 가정한 카드 실드 계산 */
+function previewCardShield(type, tier, charKey){
+  let base;
+  if(tier === 'variant') base = VARIANT_STATS[type]?.shield ?? 0;
+  else base = TIER[tier].shield;
+  // ⛏️ 대리암 패시브 시뮬레이션
+  if(type === 'rock' && charKey === 'quarrier') base += 2;
+  return base;
+}
+function previewCardDmg(type, tier){
+  if(tier === 'variant') return VARIANT_STATS[type]?.dmg ?? 0;
+  return TIER[tier].dmg;
+}
 
 // 보스별 이미지와 대사 데이터 (원장님이 올리신 파일명으로 맞췄습니다)
 // ❶ 보스 인트로 데이터 (수정 완료)
@@ -635,41 +1247,77 @@ const BOSS_INTRO_DATA = {
   "dolmeori": { img: 'dolmeori.jpg', talk: "남자는 주먹이지!" },
   "scissors": { img: 'scissorshand.jpg', talk: "싹둑싹둑... 어딜 잘라줄까? ㅋㅋ" },
   "stage3":   { img: 'stage2.jpg', talk: "네놈이 우리 부하들을 잡고 올라온거냐? 나한테 덤벼!" },
-  "stage4":   { img: 'stage3.jpg', talk: "네 수는 뻔히 다 보이네.. (실버2, 골드2장 보유한 최종 보스)" }
+  "stage4":   { img: 'sagikun.jpg', talk: "내가 뭘 낼지는 며느리도 모를걸" },
+  "stage5":   { img: 'stage3.jpg', talk: "네 수는 뻔히 다 보이네.. (실버2, 골드2장 보유한 최종 보스)" }
 };
 
 // ❷ 보스 인트로 렌더링 함수
 function renderBossIntro() {
   const data = BOSS_INTRO_DATA[G.currentBossKey];
   const stage = STAGES[G.stageIdx];
+  const pInfo = PERSONALITIES.find(p => p.key === G.cpuPersonality);
+  const charObj = CHARACTERS.find(c => c.key === G.character) || {};
 
   const introPips = G.enemyDeck.map(c => {
     const ct = CARD_TYPES[c.type];
-    const shd = TIER[c.tier].shield;
+    const shd = cardShield(c);
     return `<div class="pip ${c.type} tier-${c.tier}" style="flex-shrink:0">
       <div class="pip-icon">${ct.icon}</div>
       <div class="pip-label">${c.type.slice(0,3).toUpperCase()}</div>
-      <div class="pip-dmg">${TIER[c.tier].dmg}</div>
+      <div class="pip-dmg">${cardDmg(c)}</div>
       ${shd>0?`<div class="pip-shield">🛡${shd}</div>`:''}
     </div>`;
   }).join('');
 
+  // 💗 양쪽 HP 비교 표시
+  const hpCompare = `
+    <div class="intro-hp-row">
+      <div class="intro-hp-block intro-hp-player">
+        <div class="intro-hp-label">${charObj.icon||'⚔️'} ${charObj.name||'PLAYER'}</div>
+        <div class="intro-hp-value" style="color:${G.playerHp <= 3 ? 'var(--danger)' : G.playerHp <= 6 ? 'var(--accent)' : 'var(--win)'}">
+          HP ${G.playerHp} / ${G.playerMaxHp}
+        </div>
+      </div>
+      <div class="intro-hp-vs">VS</div>
+      <div class="intro-hp-block intro-hp-enemy">
+        <div class="intro-hp-label">${stage.enemyIcon} ${stage.enemyName}</div>
+        <div class="intro-hp-value" style="color:#ff8080">
+          HP ${G.enemyHp} / ${G.enemyMaxHp}
+        </div>
+      </div>
+    </div>`;
+
   $('app').innerHTML = `
     ${titleBarHTML(stage.label)}
     <div id="boss-intro">
+      ${hpCompare}
       <div style="font-size:.62rem;letter-spacing:2px;color:var(--enemy);margin-bottom:6px;">🎴 적의 덱</div>
       <div style="display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-bottom:14px;">${introPips}</div>
       <div class="boss-img-frame" style="background-image: url('${data.img}')"></div>
       <div class="boss-dialogue">"${data.talk}"</div>
-      <button class="btn btn-primary" onclick="BGM.playBattle(); G.screen='battle'; render();">⚔️ 대결 시작!</button>
+      <div style="text-align:center;margin:12px 0 4px;">
+        <span class="personality-badge ${pInfo.badgeClass}">${pInfo.icon} ${pInfo.label}</span>
+      </div>
+      <div style="text-align:center;font-size:.72rem;color:var(--text-dim);line-height:1.5;margin-bottom:14px;padding:0 12px;">
+        ${pInfo.summary}
+      </div>
+      <button class="btn btn-primary" onclick="${G.stageIdx===4?'BGM.playBoss()':'BGM.playBattle()'}; G.screen='battle'; render();">⚔️ 대결 시작!</button>
     </div>`;
 }
 
 // ❸ 스테이지 전체 구성
 const PERSONALITIES = [
-  { key:'aggressive', label:'강공형', badgeClass:'pb-aggressive', icon:'⚔️', desc:'강화 카드와 강력한 공격 선호', summary:'강한 카드 우선 — 높은 데미지를 노립니다' },
-  { key:'counter',    label:'반격형', badgeClass:'pb-counter',    icon:'🔄', desc:'상대 덱 분석 후 카운터',      summary:'내 패를 분석 — 이기는 패를 골라냅니다' },
-  { key:'careful',    label:'신중형', badgeClass:'pb-careful',    icon:'🛡️', desc:'안정적인 무승부 이상 추구',   summary:'무승부 이상 확률 계산 — 실수를 최소화합니다' }
+  // 순수형 3종 (1~2스테이지)
+  { key:'pure_aggressive', label:'순수 강공형', badgeClass:'pb-aggressive', icon:'⚔️', mode:'pure', base:'aggressive', summary:'강한 카드 우선 — 높은 데미지를 노리고 바위를 좋아합니다' },
+  { key:'pure_counter',    label:'순수 반격형', badgeClass:'pb-counter',    icon:'🔄', mode:'pure', base:'counter',    summary:'내 패를 분석 — 이기는 패를 골라냅니다' },
+  { key:'pure_careful',    label:'순수 신중형', badgeClass:'pb-careful',    icon:'🛡️', mode:'pure', base:'careful',    summary:'무승부 이상 확률 계산 — 실수를 최소화합니다' },
+  // 고수형 3종 (3스테이지)
+  { key:'master_aggressive', label:'강공 고수', badgeClass:'pb-master-aggressive', icon:'⚔️🎭', mode:'master', base:'aggressive', mainRate:0.7, summary:'70% 강공 + 30% 변칙 — 가끔 다른 패도 섞습니다' },
+  { key:'master_counter',    label:'반격 고수', badgeClass:'pb-master-counter',    icon:'🔄🎭', mode:'master', base:'counter',    mainRate:0.7, summary:'70% 반격 + 30% 변칙 — 카운터 위주지만 페이크도 칩니다' },
+  { key:'master_careful',    label:'신중 고수', badgeClass:'pb-master-careful',    icon:'🛡️🎭', mode:'master', base:'careful',    mainRate:0.7, summary:'70% 신중 + 30% 변칙 — 안정형이지만 가끔 한 방을 노립니다' },
+  // 보스 신규 (4~5스테이지)
+  { key:'chaotic', label:'혼돈형', badgeClass:'pb-chaotic', icon:'🎲', mode:'special', base:'chaotic', summary:'예측 불가 — 카드를 무작위로 냅니다' },
+  { key:'analyst', label:'분석형', badgeClass:'pb-analyst', icon:'🧠', mode:'special', base:'analyst', summary:'당신의 패턴을 학습합니다' }
 ];
 
 const STAGES = [
@@ -680,7 +1328,8 @@ const STAGES = [
       { name: '양아치', icon: '😤', key: 'stage1', deck: ['rock', 'rock', 'rock', 'rock', 'rock', 'scissors'], tier: 'normal' },
       { name: '날치기', icon: '🏃', key: 'nalchigi', deck: ['scissors', 'scissors', 'paper', 'paper', 'paper', 'paper'], tier: 'normal' }
     ],
-    playerHp: 10, enemyHp: 5, enemyAtk: 3
+    playerHp: 10, enemyHp: 5,
+    personalityPool: ['pure_aggressive','pure_counter','pure_careful']
   },
   {
     id: 2, name: 'STAGE 2', label: 'STAGE 2',
@@ -690,27 +1339,42 @@ const STAGES = [
       { name: '돌머리', icon: '👊', key: 'dolmeori', deck: ['rock', 'rock', 'rock', 'rock', 'paper', 'scissors'], tier: 'silver' },
       { name: '가위손', icon: '✌️', key: 'scissors', deck: ['scissors', 'scissors', 'scissors', 'scissors', 'rock', 'paper'], tier: 'silver' }
     ],
-    playerHp: 10, enemyHp: 8, enemyAtk: 3
+    playerHp: 10, enemyHp: 8,
+    personalityPool: ['pure_aggressive','pure_counter','pure_careful']
   },
  {
     id: 3, name: 'STAGE 3', label: 'STAGE 3',
     enemyName: '두목', enemyIcon: '😎',
-    playerHp: 12, enemyHp: 10, enemyAtk: 4,
+    playerHp: 12, enemyHp: 10,
     enemyDeckBuild: () => {
-      const types = ['scissors', 'scissors', 'scissors', 'paper', 'paper', 'rock'];
-      // 💡 i < 3 조건을 통해 총 3장의 카드를 실버로 만듭니다. (나머지 3장은 노멀)
-      return shuffle(types.map((t, i) => makeCard(t, i < 3 ? 'silver' : 'normal')));
-    }
+      // 💡 균형형 두목: 가위/바위/보 각 2장씩, 각 종류당 1장은 실버
+      return shuffle([
+        makeCard('scissors','silver'), makeCard('scissors','normal'),
+        makeCard('rock','silver'),     makeCard('rock','normal'),
+        makeCard('paper','silver'),    makeCard('paper','normal')
+      ]);
+    },
+    personalityPool: ['master_aggressive','master_counter','master_careful']
   },
   {
-    id: 4, name: 'STAGE 4', label: 'FINAL STAGE',
-    enemyName: '문동진', enemyIcon: '👹',
-    playerHp: 15, enemyHp: 15, enemyAtk: 5,
+    id: 4, name: 'STAGE 4', label: 'STAGE 4',
+    enemyName: '사기꾼', enemyIcon: '🃏',
+    playerHp: 13, enemyHp: 10,
     enemyDeckBuild: () => {
-      // 💡 실버 2장, 골드 2장, 노멀 2장으로 총 6장 덱을 구성합니다.
-      return buildEnemyDeck('silver', 'silver', 'gold', 'gold', 'normal', 'normal');
+      // 💡 실버 4장, 노멀 2장으로 총 6장 덱을 구성합니다.
+      return buildEnemyDeck('silver', 'silver', 'silver', 'silver', 'normal', 'normal');
     },
-    fixedPersonality: 'counter'
+    fixedPersonality: 'chaotic'
+  },
+  {
+    id: 5, name: 'STAGE 5', label: 'FINAL STAGE',
+    enemyName: '문동진', enemyIcon: '👹',
+    playerHp: 15, enemyHp: 15,
+    enemyDeckBuild: () => {
+      // 💡 골드 2장, 실버 2장, 노멀 2장으로 총 6장 덱을 구성합니다.
+      return buildEnemyDeck('gold', 'gold', 'silver', 'silver', 'normal', 'normal');
+    },
+    personalityPool: ['analyst','master_counter']
   }
 ];
 
@@ -722,14 +1386,185 @@ function buildEnemyDeck(t1,t2,t3,t4,t5,t6){
   const types=['scissors','scissors','rock','rock','paper','paper'];
   return shuffle(types.map((type,i)=>makeCard(type,[t1,t2,t3,t4,t5,t6][i])));
 }
+
+/* ════════════════════════════════════════
+   🗺️ MAP_NODES — 고정 지도 그래프 (대격변 v7.0)
+   ════════════════════════════════════════
+   각 노드는 id, type, 라벨, 다음 노드 id 배열(next), 좌표(x,y)를 가진다.
+   type: 'battle' | 'rest' | 'deal' | 'boss'
+   stageIdx: battle/boss 노드인 경우 STAGES 배열에서 어떤 적을 쓸지
+   subBossKey: 2스테이지 분기 노드에서 어떤 서브보스를 강제할지
+   ──────────────────────────────────────── */
+const MAP_NODES = {
+  // ── 1스테이지: 1택 (양아치 OR 날치기) ──
+  's1_a':       { type:'battle',  label:'STAGE 1', stageIdx:0, subBossKey:'stage1',   x:100, y:880, next:['rest1'] },
+  's1_b':       { type:'battle',  label:'STAGE 1', stageIdx:0, subBossKey:'nalchigi', x:280, y:880, next:['rest1'] },
+  
+  // ── 휴게소 1 (선형) ──
+  'rest1':      { type:'rest',    label:'휴게소',                                       x:190, y:760, next:['s2_a','s2_b','s2_c'] },
+  
+  // ── 2스테이지: 3갈래 (싸대기 / 돌머리 / 가위손) ──
+  's2_a':       { type:'battle',  label:'STAGE 2', stageIdx:1, subBossKey:'ssadagi',  x:80,  y:660, next:['fork_left','fork_right'] },
+  's2_b':       { type:'battle',  label:'STAGE 2', stageIdx:1, subBossKey:'dolmeori', x:190, y:660, next:['fork_left','fork_right'] },
+  's2_c':       { type:'battle',  label:'STAGE 2', stageIdx:1, subBossKey:'scissors', x:300, y:660, next:['fork_left','fork_right'] },
+  
+  // ── PATH A (좌): 휴게소 → 뒷거래 (직선) OR 휴게소 → 휴게소 (대각선) ──
+  'fork_left':  { type:'rest',    label:'휴게소',                                       x:120, y:540, next:['fork_left2','fork_right2'] },
+  'fork_left2': { type:'deal',    label:'뒷거래',                                       x:120, y:440, next:['s3'] },
+  
+  // ── PATH B (우): 뒷거래 → 휴게소 (직선) OR 뒷거래 → 뒷거래 (대각선) ──
+  'fork_right': { type:'deal',    label:'뒷거래',                                       x:260, y:540, next:['fork_right2','fork_left2'] },
+  'fork_right2':{ type:'rest',    label:'휴게소',                                       x:260, y:440, next:['s3'] },
+  
+  // ── 3스테이지 (합류) ──
+  's3':         { type:'battle',  label:'STAGE 3', stageIdx:2,                         x:190, y:340, next:['rest2'] },
+  
+  // ── 휴게소 2 (선형) ──
+  'rest2':      { type:'rest',    label:'휴게소',                                       x:190, y:260, next:['s4'] },
+  
+  // ── 4스테이지 ──
+  's4':         { type:'battle',  label:'STAGE 4', stageIdx:3,                         x:190, y:180, next:['rest3'] },
+  
+  // ── 휴게소 3 (NEW! 보스 직전) ──
+  'rest3':      { type:'rest',    label:'휴게소',                                       x:190, y:120, next:['deal_final'] },
+  
+  // ── 뒷거래 (보스 직전 고정) ──
+  'deal_final': { type:'deal',    label:'뒷거래',                                       x:190, y:60,  next:['s5'] },
+  
+  // ── 5스테이지: 문동진 (FINAL) ──
+  's5':         { type:'boss',    label:'FINAL', stageIdx:4,                           x:190, y:0,   next:[] }
+};
+
+/* 게임 시작 시 진입 가능한 노드 (1스테이지 분기) */
+const MAP_START_NODES = ['s1_a', 's1_b'];
+
+
+
+/* ❹ 캐릭터 정의 (대격변 v6.0) */
+const CHARACTERS = [
+  {
+    key: 'karona',
+    name: '까로나',
+    icon: '⚖️',
+    img: 'karona.jpg',
+    summary: '세상을 바로 잡고자 하는 자',
+    passive: 'karona',
+    passiveLabel: '⚖️ 기본 능력 : 부딪히며 성장',
+    passiveDesc: '무승부 시 HP +1',
+    hpBonus: 0, // 시작 HP +2 제거 (패시브로만)
+    previewDeck: [
+      ['scissors','normal'], ['scissors','normal'],
+      ['rock','normal'],     ['rock','normal'],
+      ['paper','normal'],    ['paper','normal']
+    ],
+    deckBuild: () => shuffle([
+      makeCard('scissors','normal'), makeCard('scissors','normal'),
+      makeCard('rock','normal'),     makeCard('rock','normal'),
+      makeCard('paper','normal'),    makeCard('paper','normal')
+    ])
+  },
+  {
+    key: 'barber',
+    name: '절단자',
+    icon: '✂️',
+    img: 'barber.jpg',
+    summary: '복수를 위한 날카로운 가위날',
+    passive: 'barber',
+    passiveLabel: '✂️ 기본능력 : 2차타',
+    passiveDesc: '가위로 승리 시 +1뎀 (실드 무시)',
+    hpBonus: 0,
+    previewDeck: [
+      ['scissors','silver'], ['scissors','normal'], ['scissors','normal'],
+      ['rock','normal'],     ['rock','normal'],
+      ['paper','normal']
+    ],
+    deckBuild: () => shuffle([
+      makeCard('scissors','silver'), makeCard('scissors','normal'), makeCard('scissors','normal'),
+      makeCard('rock','normal'),     makeCard('rock','normal'),
+      makeCard('paper','normal')
+    ])
+  },
+  {
+    key: 'quarrier',
+    name: '대리암',
+    icon: '⛏️',
+    img: 'quarrier.jpg',
+    summary: '바위처럼 견디는 자',
+    passive: 'quarrier',
+    passiveLabel: '⛏️ 기본능력 : 맷집',
+    passiveDesc: '모든 바위 카드에 기본 실드 +2',
+    hpBonus: 0,
+    previewDeck: [
+      ['rock','silver'], ['rock','normal'], ['rock','normal'],
+      ['paper','normal'],['paper','normal'],
+      ['scissors','normal']
+    ],
+    deckBuild: () => shuffle([
+      makeCard('rock','silver'), makeCard('rock','normal'), makeCard('rock','normal'),
+      makeCard('paper','normal'),makeCard('paper','normal'),
+      makeCard('scissors','normal')
+    ])
+  },
+  {
+    key: 'tailor',
+    name: '색종이',
+    icon: '🟩',
+    img: 'tailor.jpg',
+    summary: '종이로 마법을 부리는 자',
+    passive: 'tailor',
+    passiveLabel: '🧵 기본 능력 : 종이에 베임',
+    passiveDesc: '보 카드 사용 시 결과 무관 적 -1 (실드 무시)',
+    hpBonus: 0,
+    previewDeck: [
+      ['paper','silver'], ['paper','normal'], ['paper','normal'],
+      ['scissors','normal'], ['scissors','normal'],
+      ['rock','normal']
+    ],
+    deckBuild: () => shuffle([
+      makeCard('paper','silver'), makeCard('paper','normal'), makeCard('paper','normal'),
+      makeCard('scissors','normal'), makeCard('scissors','normal'),
+      makeCard('rock','normal')
+    ])
+  }
+];
+
 function buildStarterDeck(){
-  return shuffle(['scissors','scissors','rock','rock','paper','paper'].map(t=>makeCard(t)));
+  const charKey = G.character || 'karona';
+  const ch = CHARACTERS.find(c => c.key === charKey) || CHARACTERS[0];
+  return ch.deckBuild();
 }
 function judge(p,e){ if(p===e)return 'draw'; return CARD_TYPES[p].beats===e?'win':'lose'; }
 function shuffle(arr){
   const a=[...arr];
   for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
   return a;
+}
+
+/* ❺ 뒷거래 시스템 (대격변 v8.0) — 변종 카드 추가 */
+const DEAL_TIER_PROBS = [
+  { tier: 'normal',  weight: 20 },  // 60→20
+  { tier: 'silver',  weight: 35 },  // 30→35
+  { tier: 'gold',    weight: 30 },  // 10→30
+  { tier: 'variant', weight: 15 }   // 신규 변종
+];
+function weightedPick(table){
+  const total = table.reduce((s, x) => s + x.weight, 0);
+  let r = Math.random() * total;
+  for(const item of table){
+    r -= item.weight;
+    if(r <= 0) return item;
+  }
+  return table[table.length - 1];
+}
+function generateDealCards(count = 3){
+  const cards = [];
+  const types = ['scissors', 'rock', 'paper'];
+  for(let i = 0; i < count; i++){
+    const tierPick = weightedPick(DEAL_TIER_PROBS);
+    const type = types[Math.floor(Math.random() * 3)];
+    cards.push(makeCard(type, tierPick.tier));
+  }
+  return cards;
 }
 </script>
 
@@ -746,9 +1581,11 @@ function shuffle(arr){
 */
 const G = {
   screen:'title', stageIdx:0,
-  logFolded: false,
+  character: null,
+  logFolded: true,
   enemyDeckOpen: false,
   isGameOver: false,        // 게임오버/클리어 후 카드 클릭 차단
+  isClashing: false, // 💡 전투 연출 중 클릭을 막기 위한 잠금 변수 추가
   playerHp:10, playerMaxHp:10,
   deck:[], drawPile:[], discardPile:[],
   hand:[], usedInHand:[],
@@ -757,6 +1594,14 @@ const G = {
   enemyHp:0, enemyMaxHp:0,
   enemyDeck:[], enemyDrawPile:[], enemyDiscardPile:[],
   cpuPersonality:null,
+  playerHistory:[],
+  dealCards:[], dealPickIdx:null, dealReplaceIdx:null, dealStep:'intro',
+  dealRevealed:[false, false, false],
+  currentNodeId: null,
+  visitedNodes: [],
+  mapModalOpen: false,
+  seenEnemies: [],            // 🗺️ 현재 회차에서 만나본 적의 subBossKey 또는 stageIdx-기반 키
+  enemyDetailNodeId: null,    // 적 상세 팝업: 어느 노드를 보고 있는지
   log:[]
 };
 
@@ -774,6 +1619,20 @@ function drawPlayerHand(){
   G.usedInHand = [];
 }
 
+/* ── 성향 키를 실제 동작 모드로 변환 ── */
+function getActualPersonality(personalityKey){
+  const p = PERSONALITIES.find(x => x.key === personalityKey);
+  if(!p) return 'aggressive'; // fallback
+  if(p.mode === 'pure') return p.base;
+  if(p.mode === 'master'){
+    if(Math.random() < (p.mainRate || 0.7)) return p.base;
+    const others = ['aggressive','counter','careful'].filter(x => x !== p.base);
+    return others[Math.floor(Math.random() * others.length)];
+  }
+  // special 모드: chaotic / analyst 그대로 리턴
+  return p.base;
+}
+
 /* ── CPU AI (v4.5: 6장 오픈 핸드 대응) ──
    플레이어 핸드가 오픈이므로 아직 안 낸 카드를 정확히 파악 */
 function cpuPickCard(){
@@ -789,7 +1648,43 @@ function cpuPickCard(){
   const prob={scissors:0,rock:0,paper:0};
   remaining.forEach(c=>prob[c.type]+=1/total);
 
-  const p=G.cpuPersonality;
+  const p=getActualPersonality(G.cpuPersonality);
+
+  // 🎲 혼돈형: 완전 무작위 선택
+  if(p==='chaotic'){
+    const idx = Math.floor(Math.random() * G.enemyDrawPile.length);
+    const chosen = G.enemyDrawPile[idx];
+    G.enemyDrawPile.splice(idx,1);
+    G.enemyDiscardPile.push(chosen);
+    return chosen;
+  }
+
+  // 🧠 분석형: 플레이어 누적 카드 히스토리 기반 카운터
+  if(p==='analyst'){
+    if(!G.playerHistory || G.playerHistory.length === 0){
+      // 첫 턴: 정보 없음 → 랜덤
+      const idx = Math.floor(Math.random() * G.enemyDrawPile.length);
+      const chosen = G.enemyDrawPile[idx];
+      G.enemyDrawPile.splice(idx,1);
+      G.enemyDiscardPile.push(chosen);
+      return chosen;
+    }
+    const counts = {scissors:0, rock:0, paper:0};
+    G.playerHistory.forEach(t => counts[t]++);
+    const mostUsed = Object.keys(counts).reduce((a,b) => counts[a]>=counts[b]?a:b);
+    const beatsMap = {paper:'scissors', scissors:'rock', rock:'paper'};
+    const targetType = beatsMap[mostUsed];
+    let candidates = G.enemyDrawPile.filter(c => c.type === targetType);
+    if(!candidates.length) candidates = [G.enemyDrawPile[0]];
+    const tierOrder = {gold:3, silver:2, normal:1};
+    candidates.sort((a,b) => tierOrder[b.tier] - tierOrder[a.tier]);
+    const chosen = candidates[0];
+    const idx = G.enemyDrawPile.findIndex(c => c.id === chosen.id);
+    G.enemyDrawPile.splice(idx,1);
+    G.enemyDiscardPile.push(chosen);
+    return chosen;
+  }
+
   let scores={scissors:0,rock:0,paper:0};
 
   if(p==='aggressive'){
@@ -832,9 +1727,17 @@ function initStage(idx, hpOverride=null){
   let st = STAGES[idx];
   G.stageIdx = idx;
   
+  // 🗺️ 노드 기반 분기: currentNodeId의 subBossKey가 있으면 강제 적용
+  const node = G.currentNodeId ? MAP_NODES[G.currentNodeId] : null;
+  const forcedSubBossKey = node ? node.subBossKey : null;
+  
   if(st.isRandom) {
-    const picked = st.subBosses[Math.floor(Math.random() * st.subBosses.length)];
-    // 💡 선택된 서브 보스의 이름과 아이콘을 스테이지 정보에 덮어씁니다.
+    let picked;
+    if(forcedSubBossKey){
+      picked = st.subBosses.find(b => b.key === forcedSubBossKey) || st.subBosses[0];
+    } else {
+      picked = st.subBosses[Math.floor(Math.random() * st.subBosses.length)];
+    }
     st.enemyName = picked.name;
     st.enemyIcon = picked.icon;
     G.currentBossKey = picked.key;
@@ -844,8 +1747,14 @@ function initStage(idx, hpOverride=null){
     G.enemyDeck = st.enemyDeckBuild();
   }
 
-  G.playerHp    = hpOverride !== null ? hpOverride : st.playerHp;
-  G.playerMaxHp = st.playerHp;
+  // 캐릭터별 HP 보너스 — STAGE 1 진입 시에만 적용
+  let stagePlayerHp = st.playerHp;
+  if(idx === 0 && G.character){
+    const ch = CHARACTERS.find(c => c.key === G.character);
+    if(ch && ch.hpBonus) stagePlayerHp = st.playerHp + ch.hpBonus;
+  }
+  G.playerHp    = hpOverride !== null ? hpOverride : stagePlayerHp;
+  G.playerMaxHp = stagePlayerHp;
   G.enemyHp     = st.enemyHp;
   G.enemyMaxHp  = st.enemyHp;
   G.drawPile    = shuffle([...G.deck]);
@@ -859,8 +1768,15 @@ function initStage(idx, hpOverride=null){
   G.enemyDrawPile    = [...G.enemyDeck];
   G.enemyDiscardPile = [];
   G.enemyDeckOpen    = false;
+  G.playerHistory    = [];
   
-  G.cpuPersonality = st.fixedPersonality || PERSONALITIES[Math.floor(Math.random()*3)].key;
+  if(st.fixedPersonality){
+    G.cpuPersonality = st.fixedPersonality;
+  } else if(st.personalityPool && st.personalityPool.length){
+    G.cpuPersonality = st.personalityPool[Math.floor(Math.random()*st.personalityPool.length)];
+  } else {
+    G.cpuPersonality = PERSONALITIES[Math.floor(Math.random()*3)].key;
+  }
   
   const pInfo = PERSONALITIES.find(p=>p.key===G.cpuPersonality);
   addLog(`🧠 ${st.enemyName} 등장! 성향: ${pInfo.label}`,'enemy-log');
@@ -869,16 +1785,21 @@ function initStage(idx, hpOverride=null){
 /* ── 카드 내기 ── */
 /* ── 카드 내기 (시간차 대결 연출 적용 버전) ── */
 async function playCard(handIdx) {
-  if(G.isGameOver || !G.handDealt || G.dealAnimating) return;
+  // ⛔ 진입 차단: 게임오버, 카드없음, 딜링중, 그리고 [전투 연출 중(isClashing)]일 때 차단
+  if(G.isGameOver || !G.handDealt || G.dealAnimating || G.isClashing) return;
   if(G.usedInHand.includes(handIdx)) return;
+
+  // 🔒 1단계 방어: 전투 연출 시작! 문을 잠급니다.
+  G.isClashing = true;
 
   const pCard = G.hand[handIdx];
   const eCard = cpuPickCard();
+  G.playerHistory.push(pCard.type);
   const res = judge(pCard.type, eCard.type);
   const overlay = $('clash-overlay');
 
   // 1. 연출 시작: 내 카드만 먼저 공개하고 적은 물음표로 표시
-  $('p-clash').innerHTML = `<div class="card-icon" style="font-size:3rem">${CARD_TYPES[pCard.type].icon}</div><div class="card-dmg" style="font-size:1.5rem">${TIER[pCard.tier].dmg}</div>`;
+  $('p-clash').innerHTML = `<div class="card-icon" style="font-size:3rem">${CARD_TYPES[pCard.type].icon}</div><div class="card-dmg" style="font-size:1.5rem">${cardDmg(pCard)}</div>`;
   $('p-clash').className = `clash-card player-clash-card ${pCard.tier} ${pCard.type}`;
   
   $('e-clash').innerHTML = `<div class="card-icon" style="font-size:3rem">❓</div>`;
@@ -889,23 +1810,40 @@ async function playCard(handIdx) {
   overlay.classList.add('active');
   SFX.play();
 
-/* 2. 대기 시간 및 CPU 뜸 들이기 연출 */
-let dramaDelay = 1000; // 기본 대기 시간 1초
-if (Math.random() < 0.25) { // 25% 확률로 CPU가 고민함
-  dramaDelay = 2500; 
-  $('clash-result-text').textContent = "상대가 신중하게 고민 중...";
-  $('clash-result-text').style.color = "var(--accent)";
-}
+  /* 2. 대기 시간 및 CPU 뜸 들이기 연출 */
+  let dramaDelay = 1000; // 기본 대기 시간 1초
 
-await new Promise(r => setTimeout(r, dramaDelay));
+  /* 🎭 '신중 고민' 트리거 조건 — 결정적인 순간일수록 확률 ↑ (항상은 아님) */
+  const eCardDmg = cardDmg(eCard);
+  const pCardDmg = cardDmg(pCard);
+  const isEnemyOneShotKill = eCardDmg >= G.playerHp;
+  const isPlayerOneShotKill = pCardDmg >= G.enemyHp;
+  const isCriticalMoment = isEnemyOneShotKill || isPlayerOneShotKill;
+  const isLateGame = G.playerHp <= 5 || G.enemyHp <= 5;
 
-/* 적 카드 공개 및 로그 상세 기록 */
-$('e-clash').innerHTML = `<div class="card-icon" style="font-size:3rem">${CARD_TYPES[eCard.type].icon}</div><div class="card-dmg" style="font-size:1.5rem">${TIER[eCard.tier].dmg}</div>`;
-$('e-clash').className = `clash-card enemy-clash-card ${eCard.tier} ${eCard.type}`;
+  let triggerThinking = false;
+  if(isCriticalMoment){
+    // 한 방 킬 가능 상황: 60% 확률
+    triggerThinking = Math.random() < 0.6;
+  } else if(isLateGame){
+    // 후반 위기: 25% 확률
+    triggerThinking = Math.random() < 0.25;
+  }
 
-// 상세 로그 기록
-const detailMsg = `나: ${CARD_TYPES[pCard.type].icon}(${TIER[pCard.tier].label}) vs 적: ${CARD_TYPES[eCard.type].icon}(${TIER[eCard.tier].label})`;
-addLog(detailMsg, 'info');
+  if (triggerThinking) {
+    dramaDelay = 2500; 
+    $('clash-result-text').textContent = "상대가 신중하게 고민 중...";
+    $('clash-result-text').style.color = "var(--accent)";
+  }
+
+  await new Promise(r => setTimeout(r, dramaDelay));
+
+  /* 적 카드 공개 및 로그 상세 기록 */
+  $('e-clash').innerHTML = `<div class="card-icon" style="font-size:3rem">${CARD_TYPES[eCard.type].icon}</div><div class="card-dmg" style="font-size:1.5rem">${cardDmg(eCard)}</div>`;
+  $('e-clash').className = `clash-card enemy-clash-card ${eCard.tier} ${eCard.type}`;
+
+  const detailMsg = `나: ${CARD_TYPES[pCard.type].icon}(${TIER[pCard.tier].label}) vs 적: ${CARD_TYPES[eCard.type].icon}(${TIER[eCard.tier].label})`;
+  addLog(detailMsg, 'info');
 
   // 3. 다시 0.5초 대기 후 승패 결과 판정 및 연출
   await new Promise(r => setTimeout(r, 500));
@@ -934,61 +1872,170 @@ addLog(detailMsg, 'info');
   await new Promise(r => setTimeout(r, 1200));
   overlay.classList.remove('active');
 
-  // 실제 HP 반영 및 로그 기록 로직
-  const stage = STAGES[G.stageIdx];
-if(res==='win'){
-    const rawDmg = TIER[pCard.tier].dmg; // 내 공격력
-    const eShield = TIER[eCard.tier].shield; // 적의 실드 (이 부분이 핵심!)
-    const finalDmg = Math.max(0, rawDmg - eShield); // 실드만큼 차감
+  const appContainer = document.getElementById('app');
+
+  // --- [통합 로직] 결과 판정 및 연출 처리 ---
+  if (res === 'win') {
+    const rawDmg = cardDmg(pCard); 
+    const eShield = cardShield(eCard); 
+    let finalDmg = Math.max(0, rawDmg - eShield); 
     
     G.enemyHp = Math.max(0, G.enemyHp - finalDmg);
     
-    if(eShield > 0)
-      addLog(`승리! 내 공격 ${rawDmg} - 적 실드 ${eShield} = ${finalDmg} 데미지!`,'win');
-    else
-      addLog(`승리! ${finalDmg} 데미지!`,'win');
-  } else if(res==='lose'){
-    const rawDmg   = stage.enemyAtk;
-    const shield   = TIER[pCard.tier].shield;
+    // 💥 타격 연출
+    appContainer.classList.add('shake-light');
+    setTimeout(() => appContainer.classList.remove('shake-light'), 300);
+    
+    if(eShield > 0) showDamagePopup('enemy', eShield, 'block');
+    setTimeout(() => { if(finalDmg > 0) showDamagePopup('enemy', finalDmg, 'dmg'); }, eShield > 0 ? 300 : 0);
+    
+    addLog(`승리! ${eShield > 0 ? `적 실드 ${eShield} 감쇄 후 ` : ''}${finalDmg} 데미지!`, 'win');
+
+    // ✂️ 캐릭터 패시브: 절단자
+    if(G.character === 'barber' && pCard.type === 'scissors'){
+      G.enemyHp = Math.max(0, G.enemyHp - 1);
+      showSkillNotice('2차타', 'barber');
+      setTimeout(() => showDamagePopup('enemy', 1, 'dmg'), 500);
+      addLog(`✂️ 2차타 발동! 추가 1 데미지 (실드 무시)`, 'win');
+    }
+  } 
+  else if (res === 'lose') {
+    const rawDmg = cardDmg(eCard);
+    const shield = cardShield(pCard);
     const finalDmg = Math.max(0, rawDmg - shield);
     G.playerHp = Math.max(0, G.playerHp - finalDmg);
-    if(shield > 0)
-      addLog(`패배! 적 공격 ${rawDmg} - 실드 ${shield} = ${finalDmg} 데미지!`,'lose');
-    else
-      addLog(`패배! ${rawDmg} 데미지!`,'lose');
-  } else {
-    addLog(`무승부`,'draw');
+
+    // 💥 피격 연출
+    appContainer.classList.add('shake-hard');
+    setTimeout(() => appContainer.classList.remove('shake-hard'), 400);
+
+    if(shield > 0) showDamagePopup('player', shield, 'block');
+    setTimeout(() => { if(finalDmg > 0) showDamagePopup('player', finalDmg, 'dmg'); }, shield > 0 ? 300 : 0);
+
+    addLog(`패배! ${shield > 0 ? `실드 ${shield} 방어 후 ` : ''}${finalDmg} 피해!`, 'lose');
+
+    // ⛏️ 캐릭터 패시브: 대리암 (방어 시 시각화)
+    if(G.character === 'quarrier' && pCard.type === 'rock' && shield > 0){
+      showSkillNotice('맷집', 'quarrier');
+    }
+  } 
+  else {
+    addLog(`무승부`, 'draw');
+    // ⚖️ 캐릭터 패시브: 까로나
+    if(G.character === 'karona'){
+      G.playerHp += 1;
+      G.playerMaxHp = Math.max(G.playerMaxHp, G.playerHp);
+      showSkillNotice('무한 균형', 'karona');
+      setTimeout(() => showDamagePopup('player', 1, 'heal'), 300);
+      addLog(`⚖️ 무한 균형 발동! HP +1`, 'win');
+    }
   }
 
+  // 🧵 캐릭터 패시브: 색종이 (보 카드 사용 시 무조건 발동)
+  if(G.character === 'tailor' && pCard.type === 'paper' && G.enemyHp > 0){
+    G.enemyHp = Math.max(0, G.enemyHp - 1);
+    showSkillNotice('종이에 베임', 'tailor');
+    setTimeout(() => showDamagePopup('enemy', 1, 'dmg'), 600);
+    addLog(`🧵 종이 의지 발동! 적에게 추가 1 데미지`, 'win');
+  }
+
+  // --- [턴 마무리 및 상태 갱신] 필수 로직 ---
   G.usedInHand.push(handIdx);
-  if(G.enemyHp<=0){ render(); setTimeout(triggerStageClear,500); return; }
-  if(G.playerHp<=0){ render(); setTimeout(triggerGameOver,500); return; }
-  // 6장 모두 사용 → 다음 라운드 준비
-  if(G.usedInHand.length===6) G.handDealt=false;
   
+  // 🔒 2단계 방어: 체력이 0이 되는 순간 즉시 게임오버 상태로 만듭니다.
+  if(G.enemyHp <= 0){ 
+    G.isGameOver = true; // 💡 즉시 잠금!
+    render(); 
+    setTimeout(triggerStageClear, 500); 
+    
+    G.isClashing = false; // 안전을 위해 잠금 해제
+    return; 
+  }
+  
+  if(G.playerHp <= 0){ 
+    G.isGameOver = true; // 💡 플레이어 사망 시에도 즉시 잠금!
+    render(); 
+    setTimeout(triggerGameOver, 500); 
+    
+    G.isClashing = false; 
+    return; 
+  }
+  
+  // 6장 모두 사용 시 패 리셋 준비
+  if(G.usedInHand.length === 6) G.handDealt = false;
+  
+  // 🔓 모든 처리가 끝났으므로 다음 카드를 낼 수 있게 문을 엽니다.
+  G.isClashing = false; 
   render();
-} // ← 반드시 render() 한 번만 호출
+}
+  
+// 데미지 팝업 띄우기 함수
+// 데미지 팝업 최상단 레이어 띄우기 함수
+function showDamagePopup(target, amount, type) {
+  const block = document.getElementById(target + '-hp-block');
+  if(!block) return;
+
+  // 💡 상자의 현재 화면상 실제 좌표(Left, Top)를 계산합니다.
+  const rect = block.getBoundingClientRect();
+  const pop = document.createElement('div');
+  pop.className = 'dmg-popup';
+  
+  // 💡 위치 설정: 상자의 가로 중앙, 세로 상단 부근에 고정
+  pop.style.left = (rect.left + rect.width / 2) + 'px';
+  pop.style.top = (rect.top - 20) + 'px';
+
+  if(type === 'heal') {
+    pop.style.color = 'var(--win)';
+    pop.innerText = '+' + amount;
+  } else if(type === 'block') {
+    pop.style.color = 'var(--shield)';
+    pop.innerText = '🛡' + amount;
+    pop.style.fontSize = '2.2rem';
+  } else {
+    pop.style.color = target === 'player' ? 'var(--danger)' : 'var(--accent)';
+    pop.innerText = '-' + amount;
+  }
+
+  // 약간의 랜덤 X 위치값을 주어 여러 숫자가 겹치지 않게 함
+  const offsetX = (Math.random() - 0.5) * 40;
+  pop.style.marginLeft = `${offsetX}px`;
+
+  // 💡 상자 내부가 아니라 document.body(최상위 레벨)에 직접 추가합니다.
+  document.body.appendChild(pop);
+  setTimeout(() => pop.remove(), 1000);
+}
+
+// ✨ 스킬 발동 시각화 함수 (여기에 추가!)
+function showSkillNotice(text, charClass) {
+  const notice = document.createElement('div');
+  notice.className = `skill-notice skill-${charClass}`;
+  notice.innerText = '⚡ ' + text + ' ⚡';
+  document.body.appendChild(notice);
+  
+  SFX.upgrade();
+  
+  setTimeout(() => notice.remove(), 1500);
+}
   
 function addLog(msg,type=''){
   G.log.unshift({msg,type});
+  
   if(G.log.length>40) G.log.pop();
 }
+// 💡 스테이지 클리어 로직 수정 (최종 보스 클리어 시 시네마틱으로 연결)
 function triggerStageClear(){
   gtag('event', 'stage_clear', { stage: G.stageIdx + 1 });
-  
   G.isGameOver = true;
   SFX.stageClear();
-  if(G.stageIdx<STAGES.length-1){ G.screen='reward'; render(); }
-  else { G.screen='victory'; render(); }
-}
-function triggerGameOver(){
-  gtag('event', 'game_over', { stage: G.stageIdx + 1 });
   
-  G.isGameOver = true; G.screen='gameover'; render(); }
-function enemyRemaining(){
-  const c={scissors:0,rock:0,paper:0};
-  G.enemyDrawPile.forEach(x=>c[x.type]++);
-  return c;
+  if(G.stageIdx < STAGES.length - 1){ 
+    G.screen = 'reward'; 
+    render(); 
+  } else { 
+    // 최종 보스를 이겼다면 시네마틱 렌더링 함수 호출!
+    G.screen = 'ending_cinematic'; 
+    renderEndingCinematic(); 
+  }
 }
 </script>
 
@@ -1008,48 +2055,144 @@ function titleBarHTML(sub=''){
     </div>`;
 }
 
+/* 여기서부터 복사 */
 function render(){
+  // 🔍 화면 전환 시 적 정보 팝업 자동 닫기 (지도 화면에서만 유지)
+  const mapScreens = ['map', 'map_select'];
+  if(!mapScreens.includes(G.screen) && !G.mapModalOpen){
+    if(G.enemyDetailNodeId){
+      G.enemyDetailNodeId = null;
+      const m = document.getElementById('enemy-detail-modal');
+      if(m) m.remove();
+    }
+  }
   ({
     title:    renderTitle,
     tutorial: renderTutorial,
+    map:      renderMap,
+    map_select: renderMapSelect,
+    character_select: renderCharacterSelect,
     boss_intro: renderBossIntro,
     battle:   renderBattle,
     reward:   renderReward,
     reststop: renderRestStop,
+    deal:     renderDeal,
     gameover: renderGameOver,
-    victory:  renderVictory
+    ending_cinematic: renderEndingCinematic // 💡 범인 검거 완료! victory를 지우고 새로운 엔딩으로 교체했습니다.
   })[G.screen]?.();
+  // 🗺️ 매 렌더 후 지도 버튼/모달 갱신
+  renderMapButton();
+}
+/* 여기까지 복사해서 덮어쓰기 */
+
+/* 🗺️ 게임 중 지도 버튼 + 모달 */
+function renderMapButton(){
+  let btn = document.getElementById('floating-map-btn');
+  // 표시할 화면: 게임 진행 중인 화면들만 (지도 자체 화면, 타이틀, 튜토리얼, 캐릭터 선택, 게임오버, 승리는 제외)
+  const hiddenScreens = ['title','tutorial','map','map_select','character_select','gameover','victory'];
+  const shouldShow = !hiddenScreens.includes(G.screen);
+  
+  if(!btn){
+    btn = document.createElement('button');
+    btn.id = 'floating-map-btn';
+    btn.title = '지도 보기';
+    btn.innerHTML = '🗺️';
+    btn.onclick = openMapModal;
+    document.body.appendChild(btn);
+  }
+  btn.style.display = shouldShow ? 'flex' : 'none';
+  
+  // 모달 처리
+  let modal = document.getElementById('map-modal');
+  if(G.mapModalOpen){
+    if(!modal){
+      modal = document.createElement('div');
+      modal.id = 'map-modal';
+      document.body.appendChild(modal);
+    }
+    const cur = G.currentNodeId;
+    modal.innerHTML = `
+      <div class="map-modal-bg" onclick="closeMapModal()"></div>
+      <div class="map-modal-panel">
+        <div class="map-modal-head">
+          <span style="font-family:'Black Han Sans',sans-serif;color:var(--accent);letter-spacing:1px">🗺️ 현재 위치</span>
+          <button class="map-modal-close" onclick="closeMapModal()">✕</button>
+        </div>
+        <div class="map-modal-body" id="map-modal-scroll-body">
+          ${buildMapSVG({ interactive:false, currentNodeId:cur, visited:G.visitedNodes, clickableEnemies:true })}
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:8px;font-size:.65rem;color:var(--text-dim);padding:0 10px 10px">
+          <span><span style="color:#f04a6a">⚔️</span> 전투</span>
+          <span><span style="color:#4af0c8">⛺</span> 휴게소</span>
+          <span><span style="color:#b070ff">🌙</span> 뒷거래</span>
+          <span><span style="color:#e8c84a">●</span> 현재</span>
+        </div>
+      </div>`;
+    modal.style.display = 'flex';
+    // 모달도 현재 위치로 스크롤
+    setTimeout(() => {
+      const body = document.getElementById('map-modal-scroll-body');
+      if(!body) return;
+      if(cur && MAP_NODES[cur]){
+        const svgH = 1020;
+        const ratio = (MAP_NODES[cur].y + 50) / svgH;
+        body.scrollTop = Math.max(0, body.scrollHeight * ratio - body.clientHeight / 2);
+      } else {
+        // 시작 위치
+        const targetSvgY = 980;
+        const ratio = targetSvgY / 1020;
+        body.scrollTop = Math.max(0, body.scrollHeight * ratio - body.clientHeight);
+      }
+    }, 0);
+  } else if(modal){
+    modal.style.display = 'none';
+  }
 }
 
-/* ① TITLE — 최종 디자인 (튜토리얼 버튼 추가 버전) */
+function openMapModal(){ G.mapModalOpen = true; renderMapButton(); }
+function closeMapModal(){ 
+  G.mapModalOpen = false; 
+  // 적 정보 팝업도 같이 닫기
+  if(G.enemyDetailNodeId){
+    G.enemyDetailNodeId = null;
+    const m = document.getElementById('enemy-detail-modal');
+    if(m) m.remove();
+  }
+  renderMapButton(); 
+}
+
+/* ① TITLE — 사이버펑크 리뉴얼 버전 */
 function renderTitle(){
   $('app').innerHTML = `
     <div id="title-screen">
-      <div class="hero-ko" style="font-weight:900; letter-spacing:2px;">가위 바위 보 배틀</div>
-      <div class="hero-en" style="opacity:0.8;">S-R-P &nbsp; BATTLE</div>
-      <div class="hero-ver">v1.0</div>
+      <!-- 영문을 위로, 크게 배치 -->
+      <div class="hero-en">S-R-P BATTLE</div>
+      <!-- 한글을 아래로, 보조 타이틀 느낌으로 배치 -->
+      <div class="hero-ko">가위 바위 보 배틀</div>
       
-      <div class="rps-deco">
-        <span>✌️</span><span>✊</span><span>🖐️</span>
+      <div class="hero-ver" style="color:rgba(255,255,255,0.3)">v2.0</div>
+      
+      <div class="rps-deco" style="margin-top: 20px;">
+        <span style="color:#00f3ff">✌️</span>
+        <span style="color:#ff0055">✊</span>
+        <span style="color:#00f3ff">🖐️</span>
       </div>
 
-      <div style="margin: 40px 0 10px 0;">
-        <button class="btn btn-primary" onclick="startGame()" style="padding: 15px 40px; font-size: 1rem;">⚔️ 게임 시작</button>
-      </div>
-
-      <div style="margin-bottom: 40px;">
-        <button class="btn btn-draw" onclick="G.screen='tutorial'; render();" style="padding: 10px 30px;">📖 튜토리얼 보기</button>
+      <div style="margin: 40px 0 10px 0; display: flex; flex-direction: column; gap: 12px; width: 100%; align-items: center;">
+        <button class="btn btn-primary" onclick="startGame()" style="padding: 15px 60px; font-size: 1.1rem; width: 260px;">⚔️ 게임 시작</button>
+        
+        <!-- 비활성화된 스토리 버튼 -->
+        <button class="btn btn-draw btn-disabled" style="width: 260px;">📖 스토리 보기 (준비 중)</button>
+        
+        <button class="btn btn-draw" onclick="G.screen='tutorial'; render();" style="padding: 10px 30px; width: 260px;">❓ 튜토리얼</button>
       </div>
 
       <div style="margin-top:50px; line-height:1.8; letter-spacing:1px; font-family:'Orbitron', sans-serif;">
         <div style="font-size:.75rem; color:var(--accent2); font-weight:700; margin-bottom:4px;">
-          Developed by Karona (=정인휴)
+          Developed by Karona
         </div>
-        <div style="font-size:.65rem; color:var(--text); opacity:0.8;">
-          April 2026
-        </div>
-        <div style="font-size:.65rem; color:var(--text-dim); opacity:0.6;">
-          in Phnom Penh, Cambodia
+        <div style="font-size:.65rem; color:var(--text); opacity:0.4;">
+          PHNOM PENH, 2026
         </div>
       </div>
     </div>`;
@@ -1078,15 +2221,558 @@ function renderTutorial() {
       </div>
       <div style="margin-bottom:15px;">
         <b style="color:var(--accent2)">5. 적의 성향</b><br>
-        적은 성향에 따라 패를 내는 전략이 다릅니다.<br>
-        - ⚔️ <b>강공형</b>: 높은 데미지의 카드를 우선 사용<br>
-        - 🔄 <b>반격형</b>: 내 패를 분석하여 이기는 패를 내려 함<br>
-        - 🛡️ <b>신중형</b>: 무승부 이상을 노리며 안정적으로 플레이
+        적은 성향에 따라 패를 내는 전략이 다릅니다. 후반 스테이지로 갈수록 더 까다로운 성향이 등장합니다.<br><br>
+        <span style="color:var(--text-dim);font-size:.78rem;">[기본형 — 1~2 스테이지]</span><br>
+        - ⚔️ <b>순수 강공형</b>: 강한 카드 우선 — 높은 데미지를 노리고 바위를 좋아합니다<br>
+        - 🔄 <b>순수 반격형</b>: 내 패를 분석 — 이기는 패를 골라냅니다<br>
+        - 🛡️ <b>순수 신중형</b>: 무승부 이상 확률 계산 — 실수를 최소화합니다<br><br>
+        <span style="color:var(--text-dim);font-size:.78rem;">[고수형 — 3 스테이지]</span><br>
+        - ⚔️🎭 <b>강공 고수</b>: 70% 강공 + 30% 변칙 — 가끔 다른 패도 섞습니다<br>
+        - 🔄🎭 <b>반격 고수</b>: 70% 반격 + 30% 변칙 — 카운터 위주지만 페이크도 칩니다<br>
+        - 🛡️🎭 <b>신중 고수</b>: 70% 신중 + 30% 변칙 — 안정형이지만 가끔 한 방을 노립니다<br><br>
+        <span style="color:var(--text-dim);font-size:.78rem;">[보스 전용 — 4~5 스테이지]</span><br>
+        - 🎲 <b>혼돈형</b>: 예측 불가 — 카드를 무작위로 냅니다<br>
+        - 🧠 <b>분석형</b>: 당신의 패턴을 학습합니다
+      </div>
+      
+      <div style="margin-bottom:15px;">
+        <b style="color:var(--accent2)">6. 🗺️ 지도와 경로 선택</b><br>
+        게임은 여러 갈래의 길로 펼쳐집니다. 1~2스테이지에서는 만날 적을 직접 고를 수 있고, 3스테이지 전에는 휴게소부터 갈지 뒷거래부터 갈지 경로를 선택합니다.<br><br>
+        <span style="color:var(--text-dim);font-size:.78rem;">• 적을 클릭하면 정보 확인 (성향, HP, 덱)</span><br>
+        <span style="color:var(--text-dim);font-size:.78rem;">• 처음 만나는 적의 덱은 ❓로 가려져 있습니다</span><br>
+        <span style="color:var(--text-dim);font-size:.78rem;">• 한 번 싸워본 적은 덱이 공개됩니다</span><br>
+        <span style="color:var(--text-dim);font-size:.78rem;">• 게임 도중 우상단 🗺️ 버튼을 누르면 언제든 지도를 볼 수 있습니다</span>
+      </div>
+      
+      <div style="margin-bottom:15px;">
+        <b style="color:var(--accent2)">7. 🌙 뒷거래</b><br>
+        길에서 만나는 수상한 거래상이 있습니다. HP를 1 잃고 카드 3장을 본 후, 그 중 1장을 자신의 덱과 교체할 수 있습니다. 강력한 카드를 노릴 수 있지만 체력 관리가 필요합니다.
       </div>
       <div style="text-align:center; margin-top:20px; margin-bottom:10px;">
         <button class="btn btn-primary" onclick="G.screen='title'; render();" style="width:100%">확인 (돌아가기)</button>
       </div>
     </div>`;
+}
+
+/* ════════════════════════════════════════
+   🗺️ MAP RENDER — 지도 화면 (대격변 v7.0)
+   ════════════════════════════════════════ */
+
+/* 노드 타입별 스타일 */
+function nodeColor(type){
+  return ({
+    battle: '#f04a6a',
+    rest:   '#4af0c8',
+    deal:   '#b070ff',
+    boss:   '#e8c84a'
+  })[type] || '#7070a0';
+}
+function nodeIcon(node){
+  if(node.type === 'boss') return '👹';
+  if(node.type === 'rest') return '⛺';
+  if(node.type === 'deal') return '🌙';
+  // battle: 적 종류별 아이콘
+  if(node.subBossKey === 'stage1')   return '😤';
+  if(node.subBossKey === 'nalchigi') return '🏃';
+  if(node.subBossKey === 'ssadagi')  return '✋';
+  if(node.subBossKey === 'dolmeori') return '👊';
+  if(node.subBossKey === 'scissors') return '✌️';
+  if(node.stageIdx === 2) return '😎';
+  if(node.stageIdx === 3) return '🃏';
+  return '⚔️';
+}
+function nodeName(node){
+  if(node.type === 'boss') return '문동진';
+  if(node.type === 'rest') return '휴게소';
+  if(node.type === 'deal') return '뒷거래';
+  if(node.subBossKey === 'stage1')   return '양아치';
+  if(node.subBossKey === 'nalchigi') return '날치기';
+  if(node.subBossKey === 'ssadagi')  return '싸대기';
+  if(node.subBossKey === 'dolmeori') return '돌머리';
+  if(node.subBossKey === 'scissors') return '가위손';
+  if(node.stageIdx === 2) return '두목';
+  if(node.stageIdx === 3) return '사기꾼';
+  return '???';
+}
+
+/* 🔍 적 노드의 정보 추출 (STAGES + BOSS_INTRO_DATA에서) */
+function getEnemyInfoForNode(nodeId){
+  const node = MAP_NODES[nodeId];
+  if(!node) return null;
+  const st = STAGES[node.stageIdx];
+  if(!st) return null;
+  
+  const name = nodeName(node);
+  const icon = nodeIcon(node);
+  
+  // subBoss가 있으면 그 데이터, 없으면 STAGES 자체
+  let img = '';
+  let hp = st.enemyHp;
+  let deck = []; // [{type, tier}]
+  let deckCount = 6;
+  
+  if(node.subBossKey){
+    const sub = st.subBosses?.find(b => b.key === node.subBossKey);
+    if(sub){
+      // BOSS_INTRO_DATA 키와 일치
+      img = (BOSS_INTRO_DATA[sub.key]?.img) || '';
+      // sub.deck은 type만 있는 배열, tier는 'normal' (단 첫 카드만 sub.tier)
+      deck = sub.deck.map((t, i) => ({
+        type: t,
+        tier: i === 0 ? (sub.tier || 'normal') : 'normal'
+      }));
+      deckCount = deck.length;
+    }
+  } else {
+    // 비-서브보스 (STAGE 3, 4, 5): BOSS_INTRO_DATA에서 stage{n+1} 키
+    img = (BOSS_INTRO_DATA[`stage${node.stageIdx + 1}`]?.img) || '';
+    // 덱은 enemyDeckBuild()로 생성하지만, 매번 shuffle이므로 종류만 정적으로
+    // 하지만 정확한 정적 정의가 없어서 임시로 placeholder
+    if(node.stageIdx === 2){ // 두목
+      deck = [
+        {type:'scissors',tier:'silver'}, {type:'scissors',tier:'normal'},
+        {type:'rock',    tier:'silver'}, {type:'rock',    tier:'normal'},
+        {type:'paper',   tier:'silver'}, {type:'paper',   tier:'normal'}
+      ];
+    } else if(node.stageIdx === 3){ // 사기꾼
+      deck = [
+        {type:'scissors',tier:'silver'}, {type:'scissors',tier:'silver'},
+        {type:'rock',    tier:'silver'}, {type:'rock',    tier:'silver'},
+        {type:'paper',   tier:'normal'}, {type:'paper',   tier:'normal'}
+      ];
+    } else if(node.stageIdx === 4){ // 문동진
+      deck = [
+        {type:'scissors',tier:'gold'},   {type:'scissors',tier:'gold'},
+        {type:'rock',    tier:'silver'}, {type:'rock',    tier:'silver'},
+        {type:'paper',   tier:'normal'}, {type:'paper',   tier:'normal'}
+      ];
+    }
+    deckCount = 6;
+  }
+  
+  // 성향 풀
+  let personalityPool = st.personalityPool || (st.fixedPersonality ? [st.fixedPersonality] : []);
+  
+  return { name, icon, img, hp, deck, deckCount, personalityPool };
+}
+
+/* 🔍 적 정보 팝업 — 열기/닫기 */
+function openEnemyDetail(nodeId){
+  G.enemyDetailNodeId = nodeId;
+  renderEnemyDetailModal();
+}
+function closeEnemyDetail(){
+  G.enemyDetailNodeId = null;
+  const modal = document.getElementById('enemy-detail-modal');
+  if(modal) modal.remove();
+}
+
+/* 🔍 적 정보 팝업 렌더링 */
+function renderEnemyDetailModal(){
+  const nodeId = G.enemyDetailNodeId;
+  if(!nodeId) return;
+  const info = getEnemyInfoForNode(nodeId);
+  if(!info) return;
+  
+  const seen = G.seenEnemies.includes(nodeId);
+  
+  // 덱 표시 - seen이면 실제 덱, 아니면 ❓
+  let deckHTML;
+  if(seen){
+    deckHTML = info.deck.map(c => {
+      const ct = CARD_TYPES[c.type];
+      const shd = cardShield(c);
+      return `<div class="pip ${c.type} tier-${c.tier}" style="cursor:default">
+        <div class="pip-icon">${ct.icon}</div>
+        <div class="pip-label">${c.type.slice(0,3).toUpperCase()}</div>
+        <div class="pip-dmg">${cardDmg(c)}</div>
+        ${shd>0?`<div class="pip-shield">🛡${shd}</div>`:''}
+      </div>`;
+    }).join('');
+  } else {
+    // 처음 만나는 적: ❓ x 개수만 (A + B 혼재)
+    deckHTML = Array(info.deckCount).fill(0).map(() => `
+      <div class="pip" style="background:#1a1a1a;border:2px dashed #444;cursor:default;display:flex;align-items:center;justify-content:center">
+        <div class="pip-icon" style="font-size:1.6rem;color:#666">❓</div>
+      </div>
+    `).join('');
+  }
+  
+  // 성향 뱃지들
+  const personalityBadges = info.personalityPool.map(pkey => {
+    const p = PERSONALITIES.find(pp => pp.key === pkey);
+    if(!p) return '';
+    return `<span class="personality-badge ${p.badgeClass}" style="font-size:.65rem;margin:2px">${p.icon} ${p.label}</span>`;
+  }).join('');
+  
+  // 메시지 (A+B 혼재)
+  const seenMsg = seen
+    ? `<div style="font-size:.7rem;color:var(--win);text-align:center;margin-top:8px;font-weight:700">✓ 한 번 만나본 적</div>`
+    : `<div style="font-size:.72rem;color:var(--accent);text-align:center;margin-top:8px;line-height:1.5;background:rgba(232,200,74,.06);padding:8px;border-radius:8px;border:1px dashed var(--accent)">
+        🌫️ 처음 만나는 적입니다<br>
+        <span style="font-size:.65rem;color:var(--text-dim)">한 번 싸워봐야 덱이 공개됩니다</span>
+      </div>`;
+  
+  // ⚔️ 진입 가능 여부: map_select 화면에서 pendingNextOptions에 있을 때만
+  const isEnterable = G.screen === 'map_select' && (G.pendingNextOptions || []).includes(nodeId);
+  const enterBtn = isEnterable
+    ? `<button class="btn btn-primary" onclick="confirmEnterEnemy('${nodeId}')" style="width:100%;margin-top:14px">⚔️ 이 적과 대결하기</button>`
+    : '';
+  
+  // 모달 생성/갱신
+  let modal = document.getElementById('enemy-detail-modal');
+  if(!modal){
+    modal = document.createElement('div');
+    modal.id = 'enemy-detail-modal';
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML = `
+    <div class="enemy-detail-bg" onclick="closeEnemyDetail()"></div>
+    <div class="enemy-detail-panel">
+      <div class="enemy-detail-head">
+        <span style="font-family:'Black Han Sans',sans-serif;color:var(--danger);letter-spacing:1px">🔍 적 정보</span>
+        <button class="map-modal-close" onclick="closeEnemyDetail()">✕</button>
+      </div>
+      <div class="enemy-detail-body">
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">
+          <div class="enemy-detail-img" style="background-image:url('${info.img}')"></div>
+          <div style="flex:1">
+            <div style="font-family:'Black Han Sans',sans-serif;font-size:1.2rem;color:var(--text)">${info.icon} ${info.name}</div>
+            <div style="font-size:.72rem;color:var(--text-dim);margin-top:4px">HP ${info.hp}</div>
+          </div>
+        </div>
+        
+        <div style="font-size:.7rem;color:var(--text-dim);margin-bottom:6px;letter-spacing:1px">🎴 덱 (${info.deckCount}장)</div>
+        <div class="pip-row" style="justify-content:center;gap:5px;flex-wrap:wrap">${deckHTML}</div>
+        ${seenMsg}
+        
+        <div style="margin-top:14px">
+          <div style="font-size:.7rem;color:var(--text-dim);margin-bottom:6px;letter-spacing:1px">🧠 성향 (이 중 하나로 등장)</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center">${personalityBadges}</div>
+        </div>
+        
+        ${enterBtn}
+      </div>
+    </div>`;
+  modal.style.display = 'flex';
+}
+
+/* ⚔️ 적 정보 팝업에서 "이 적과 대결" 버튼 클릭 시 */
+function confirmEnterEnemy(nodeId){
+  closeEnemyDetail();
+  selectNextNode(nodeId);
+}
+
+/* SVG 지도 마크업 생성 — 인라인용 */
+function buildMapSVG({ interactive = false, currentNodeId = null, visited = [], nextOptions = [], clickableEnemies = false } = {}){
+  const W = 380, H = 1020;  // 940 → 1020 (하단 80px 여백 추가)
+  const visitedSet = new Set(visited);
+  const nextSet = new Set(nextOptions);
+  
+  // 🗺️ "지나온 노드" 판정: visited에 들어간 노드 ID들
+  // "지나온 길(연결선)"은 from이 visited면 흑백 처리
+  
+  // 연결선
+  let lines = '';
+  Object.entries(MAP_NODES).forEach(([id, n]) => {
+    n.next.forEach(nextId => {
+      const t = MAP_NODES[nextId];
+      if(!t) return;
+      // 좌표 그대로 사용 (위=문동진, 아래=START)
+      const y1 = n.y + 50, y2 = t.y + 50;  // +50: 상단 여백
+      // from이 visited이면 흑백 (지나온 길)
+      // 현재 위치의 Y좌표를 기준으로 더 뒤에 있는 선인지 판단 (높은 Y가 하단/과거)
+      const curY = currentNodeId ? MAP_NODES[currentNodeId].y : 1000;
+      const isPastEdge = (n.y > curY) || (id !== currentNodeId && n.y === curY);
+      const color = isPastEdge ? '#3a3a3a' : '#5a5a7a';
+      const op = isPastEdge ? '.4' : '1';
+      lines += `<line x1="${n.x}" y1="${y1}" x2="${t.x}" y2="${y2}" stroke="${color}" stroke-width="2" stroke-dasharray="5,4" opacity="${op}"/>`;
+    });
+  });
+  
+  // 노드들
+  let nodes = '';
+  Object.entries(MAP_NODES).forEach(([id, n]) => {
+    const y = n.y + 50;  // +50: 상단 여백
+    const baseColor = nodeColor(n.type);
+    
+    // 💡 변경 핵심: 다음 갈 길을 고르는 중(map_select)이라면 현재 서있는 곳도 '볼일 끝난 과거'로 취급하여 하이라이트를 끕니다.
+    const isCurrent = (id === currentNodeId) && (G.screen !== 'map_select');
+    
+    const isNext = nextSet.has(id);
+    const isBoss = n.type === 'boss';
+    const isVisited = visitedSet.has(id); // 아래 클릭 이벤트 등에서 쓸 수 있으니 유지
+
+    // 현재 층(Y)보다 뒤에 있거나, 같은 층인데 내가 아닌 노드(날라리 등)는 과거로 판정
+    const curY = currentNodeId ? MAP_NODES[currentNodeId].y : 1000;
+    const isPastNode = (n.y > curY) || (!isCurrent && n.y === curY);
+
+    // 과거 노드는 흑백('#5a5a5a') 처리
+    const color = isPastNode ? '#5a5a5a' : baseColor;
+    const textColor = isPastNode ? '#888' : (isBoss ? '#ffd060' : (n.type === 'battle' ? '#ff8080' : baseColor));
+    const labelColor = isPastNode ? '#666' : baseColor;
+
+    const w = isBoss ? 100 : 80;
+    const h = isBoss ? 50 : 44;
+    const x = n.x - w/2;
+    const ny = y - h/2;
+    
+    // opacity 중복 선언 해결 및 로직 통합
+    let opacity = '1';
+    let strokeWidth = '2';
+    let extraGlow = '';
+    
+    // 완전한 과거 노드이면 0.4, (과거는 아니지만) 지나온 노드면 0.5로 설정
+    if(isPastNode) { 
+      opacity = '.4'; 
+    } else if(isVisited && !isCurrent) { 
+      opacity = '.5'; 
+    }
+    if(isCurrent){ strokeWidth = '3'; extraGlow = `<rect x="${x-3}" y="${ny-3}" width="${w+6}" height="${h+6}" rx="13" fill="none" stroke="${baseColor}" stroke-width="2" opacity=".5"><animate attributeName="opacity" values=".2;.7;.2" dur="1.5s" repeatCount="indefinite"/></rect>`; }
+    if(isNext){ extraGlow = `<rect x="${x-2}" y="${ny-2}" width="${w+4}" height="${h+4}" rx="12" fill="none" stroke="${baseColor}" stroke-width="1.5" opacity=".7"><animate attributeName="opacity" values=".4;1;.4" dur="1.2s" repeatCount="indefinite"/></rect>`; }
+    
+    // 클릭 핸들러 우선순위:
+    // 1) clickableEnemies + battle/boss → 적 정보 팝업 (진입 가능 여부와 무관)
+    // 2) interactive + isNext + 휴게소/뒷거래 → 노드 진입 (정보 볼 게 없으니 바로 진입)
+    let clickAttr = '';
+    let groupClass = '';
+    if(clickableEnemies && (n.type === 'battle' || n.type === 'boss')){
+      clickAttr = `onclick="openEnemyDetail('${id}')" style="cursor:pointer"`;
+      groupClass = 'map-node-info';
+    } else if(interactive && isNext){
+      clickAttr = `onclick="selectNextNode('${id}')" style="cursor:pointer"`;
+      groupClass = 'map-node-clickable';
+    }
+    
+    // 🗺️ 폰트 변경: Black Han Sans → Noto Sans (가독성)
+    const titleFont = "'Noto Sans KR', sans-serif";
+    const labelFont = "'Orbitron', sans-serif";
+    
+    nodes += `<g class="${groupClass}" ${clickAttr} opacity="${opacity}">${extraGlow}
+      <rect x="${x}" y="${ny}" width="${w}" height="${h}" rx="10"
+            fill="${(isVisited && !isCurrent) ? '#1a1a1a' : (isBoss?'#1e1608':n.type==='rest'?'#0a1a12':n.type==='deal'?'#160f22':'#1e0a10')}"
+            stroke="${color}" stroke-width="${strokeWidth}"/>
+      <rect x="${x}" y="${ny}" width="${w}" height="${h}" rx="10" fill="${color}" opacity=".05"/>
+      ${isBoss ? `<text x="${n.x}" y="${ny+18}" text-anchor="middle" font-family="${labelFont}" font-size="8" fill="${labelColor}" letter-spacing="1.5">FINAL STAGE</text>
+                  <text x="${n.x}" y="${ny+38}" text-anchor="middle" font-family="${titleFont}" font-weight="700" font-size="13" fill="${textColor}">${nodeIcon(n)} ${nodeName(n)}</text>`
+                : n.type === 'battle' ? `<text x="${n.x}" y="${ny+17}" text-anchor="middle" font-family="${labelFont}" font-size="7.5" fill="${labelColor}" letter-spacing="1">${n.label}</text>
+                                          <text x="${n.x}" y="${ny+34}" text-anchor="middle" font-family="${titleFont}" font-weight="700" font-size="11" fill="${textColor}">${nodeIcon(n)} ${nodeName(n)}</text>`
+                : `<text x="${n.x}" y="${ny+19}" text-anchor="middle" font-size="13">${nodeIcon(n)}</text>
+                   <text x="${n.x}" y="${ny+36}" text-anchor="middle" font-family="${titleFont}" font-weight="700" font-size="11" fill="${textColor}">${nodeName(n)}</text>`
+      }
+    </g>`;
+  });
+  
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">
+    <defs>
+      <radialGradient id="mapBgGrad" cx="50%" cy="50%" r="60%">
+        <stop offset="0%" stop-color="#1a1a2e"/>
+        <stop offset="100%" stop-color="#0d0d14"/>
+      </radialGradient>
+      <pattern id="mapDots" width="6" height="6" patternUnits="userSpaceOnUse">
+        <circle cx="3" cy="3" r=".8" fill="#2a2a42"/>
+      </pattern>
+    </defs>
+    <rect width="${W}" height="${H}" fill="url(#mapBgGrad)" rx="14"/>
+    <rect width="${W}" height="${H}" fill="url(#mapDots)" rx="14" opacity=".5"/>
+    ${lines}
+    ${nodes}
+    <text x="190" y="${H-50}" text-anchor="middle" font-family="'Noto Sans KR', sans-serif" font-weight="700" font-size="13" fill="#e8c84a" letter-spacing="3">▲ 시작 ▲</text>
+    <text x="190" y="${H-28}" text-anchor="middle" font-family="'Noto Sans KR', sans-serif" font-size="9" fill="#888" letter-spacing="1">위로 스크롤하여 전체 경로 확인</text>
+  </svg>`;
+}
+
+/* 전체 지도 화면 (게임 시작 시 보여주는 화면) */
+function renderMap(){
+  $('app').innerHTML = `
+    ${titleBarHTML('🗺️ STAGE MAP')}
+    <div class="panel" style="padding:14px 12px">
+      <div style="text-align:center;font-size:.78rem;color:var(--text-dim);margin-bottom:10px;line-height:1.6">
+        앞으로 펼쳐질 모든 경로입니다.<br>
+        <span style="font-size:.68rem;color:var(--accent2)">💡 적을 클릭하면 정보를 볼 수 있습니다</span>
+      </div>
+      <div id="map-scroll-container" style="background:#0d0d14;border-radius:12px;padding:8px;max-height:60vh;overflow-y:auto">
+        ${buildMapSVG({ interactive:false, clickableEnemies:true })}
+      </div>
+      <div class="map-legend" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:14px;font-size:.7rem;color:var(--text-dim)">
+        <span><span style="color:#f04a6a">⚔️</span> 전투</span>
+        <span><span style="color:#4af0c8">⛺</span> 휴게소</span>
+        <span><span style="color:#b070ff">🌙</span> 뒷거래</span>
+        <span><span style="color:#e8c84a">★</span> 최종 보스</span>
+      </div>
+      <div class="modal-actions" style="margin-top:14px">
+        <button class="btn btn-primary" onclick="G.screen='character_select'; render();" style="width:100%">
+          이해했다 → 캐릭터 선택
+        </button>
+      </div>
+    </div>`;
+  scrollMapToBottom();
+}
+
+/* 🗺️ 분기 노드 선택 화면 (다음 갈래 선택) */
+function renderMapSelect(){
+  const opts = G.pendingNextOptions || [];
+  $('app').innerHTML = `
+    ${titleBarHTML('🗺️ 다음 경로 선택')}
+    <div class="panel" style="padding:14px 12px">
+      <div style="text-align:center;font-size:.78rem;color:var(--text-dim);margin-bottom:10px;line-height:1.6">
+        어느 방향으로 가시겠습니까?<br>
+         <span style="font-size:.68rem;color:var(--accent2)">💡 적을 클릭하면 정보를 볼 수 있습니다</span>
+      </div>
+      <div id="map-scroll-container" style="background:#0d0d14;border-radius:12px;padding:8px;max-height:60vh;overflow-y:auto">
+        ${buildMapSVG({ interactive:true, currentNodeId:G.currentNodeId, visited:G.visitedNodes, nextOptions:opts, clickableEnemies:true })}
+      </div>
+      <div class="map-legend" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:12px;font-size:.7rem;color:var(--text-dim)">
+        <span><span style="color:#f04a6a">⚔️</span> 전투</span>
+        <span><span style="color:#4af0c8">⛺</span> 휴게소</span>
+        <span><span style="color:#b070ff">🌙</span> 뒷거래</span>
+      </div>
+    </div>`;
+  scrollMapToCurrent();
+}
+
+/* 🗺️ 지도 컨테이너의 스크롤 위치 조정 헬퍼 */
+function scrollMapToBottom(){
+  // 페인트 후 실행 (DOM이 준비된 다음)
+  setTimeout(() => {
+    const c = document.getElementById('map-scroll-container');
+    if(!c) return;
+    // STAGE 1 노드(y=880, +50 오프셋 = 930)가 화면 하단에서 약 80px 위에 보이도록
+    // SVG 높이 1020 기준, scrollHeight도 그 비율
+    // 컨테이너 viewport bottom이 SVG 좌표 ~960 위치를 가리키게
+    const targetSvgY = 980; // STAGE 1보다 살짝 아래
+    const ratio = targetSvgY / 1020;
+    const targetTop = c.scrollHeight * ratio - c.clientHeight;
+    c.scrollTop = Math.max(0, targetTop);
+  }, 0);
+}
+function scrollMapToCurrent(){
+  setTimeout(() => {
+    const c = document.getElementById('map-scroll-container');
+    if(!c) return;
+    const cur = G.currentNodeId ? MAP_NODES[G.currentNodeId] : null;
+    if(!cur){ scrollMapToBottom(); return; }
+    const svgH = 1020;
+    const ratio = (cur.y + 50) / svgH;
+    const targetTop = c.scrollHeight * ratio - c.clientHeight / 2;
+    c.scrollTop = Math.max(0, targetTop);
+  }, 0);
+}
+
+/* 사용자가 노드 클릭 → 진입 */
+function selectNextNode(nodeId){
+  if(!G.pendingNextOptions || !G.pendingNextOptions.includes(nodeId)) return;
+  enterNode(nodeId);
+}
+
+/* 노드 진입 — 타입에 따라 적절한 화면으로 */
+function enterNode(nodeId){
+  const node = MAP_NODES[nodeId];
+  if(!node) return;
+  
+  // 이전 노드를 visited에 추가
+  if(G.currentNodeId && !G.visitedNodes.includes(G.currentNodeId)){
+    G.visitedNodes.push(G.currentNodeId);
+  }
+  G.currentNodeId = nodeId;
+  G.pendingNextOptions = null;
+  
+  if(node.type === 'battle' || node.type === 'boss'){
+    // 🗺️ 만나본 적 기록 (브라우저 세션 동안 유지)
+    if(!G.seenEnemies.includes(nodeId)){
+      G.seenEnemies.push(nodeId);
+      saveSeenEnemies();
+    }
+    // 매 전투마다 로그는 기본 접힘
+    G.logFolded = true;
+    // 첫 1스테이지 진입은 hpOverride=null (기본 HP 적용), 그 이후는 G.playerHp 유지
+    const isFirstStage = !G.visitedNodes.some(id => {
+      const n = MAP_NODES[id];
+      return n && (n.type === 'battle' || n.type === 'boss');
+    });
+    initStage(node.stageIdx, isFirstStage ? null : G.playerHp);
+    if(node.type === 'boss') BGM.playBoss(); else BGM.playBattle();
+    G.screen = 'boss_intro';
+    render();
+  } else if(node.type === 'rest'){
+    G.screen = 'reststop';
+    BGM.playRest();
+    render();
+  } else if(node.type === 'deal'){
+    G.dealCards = [];
+    G.dealPickIdx = null;
+    G.dealReplaceIdx = null;
+    G.dealStep = 'intro';
+    G.screen = 'deal';
+    BGM.playDeal();
+    SFX.deal();
+    render();
+  }
+}
+
+/* ④ CHARACTER SELECT — 대격변 v6.0: 캐릭터 선택 화면 */
+let charPickKey = null;
+function renderCharacterSelect(){
+  const cards = CHARACTERS.map(ch => {
+    const isSel = charPickKey === ch.key;
+    // 🛡️ shuffle 안 하고 정적 previewDeck 사용 (깜빡임 방지)
+    // 🛡️ 패시브 미리 반영 (대리암 바위 실드 +2 등)
+    // renderCharacterSelect 함수 내부의 deckPips 생성 로직
+const deckPips = ch.previewDeck.map(([type, tier]) => {
+  const ct = CARD_TYPES[type];
+  const shd = previewCardShield(type, tier, ch.key);
+  const dmg = previewCardDmg(type, tier);
+  return `<div class="char-pip pip ${type} tier-${tier}">
+    <div class="pip-icon" style="font-size:1.1rem">${ct.icon}</div> <!-- 아이콘 크기 살짝 조정 -->
+    <div class="pip-dmg" style="font-size:0.6rem">${dmg}</div>
+    ${shd>0?`<div class="pip-shield" style="font-size:0.5rem">🛡${shd}</div>`:''}
+  </div>`;
+}).join('');
+    const hpBadge = ch.hpBonus>0
+      ? `<span style="color:var(--win);font-size:.65rem;margin-left:6px">HP +${ch.hpBonus}</span>`
+      : '';
+    const passiveBlock = ch.passiveLabel
+      ? `<div class="char-passive">
+          <div class="char-passive-label">${ch.passiveLabel}</div>
+          <div class="char-passive-desc">${ch.passiveDesc}</div>
+         </div>`
+      : '';
+    return `<div class="char-card ${isSel?'selected':''}" onclick="charPickKey='${ch.key}'; renderCharacterSelect();">
+      <div class="char-head">
+        <span class="char-icon">${ch.icon}</span>
+        <span class="char-name">${ch.name}</span>
+        ${hpBadge}
+      </div>
+      <div class="char-summary">${ch.summary}</div>
+      <div class="char-deck">${deckPips}</div>
+      ${passiveBlock}
+    </div>`;
+  }).join('');
+
+  $('app').innerHTML = `
+    ${titleBarHTML('CHARACTER — 캐릭터 선택')}
+    <div class="panel" style="padding:18px 16px">
+      <div style="text-align:center;font-size:.78rem;color:var(--text-dim);margin-bottom:14px;line-height:1.6">
+        함께 모험을 떠날 캐릭터를 선택하세요.<br>
+        <span style="font-size:.7rem">각 캐릭터는 시작 덱과 능력이 다릅니다.</span>
+      </div>
+      <div class="char-grid">${cards}</div>
+      <div class="modal-actions" style="margin-top:16px">
+        <button class="btn btn-primary" onclick="confirmCharacter()" ${charPickKey?'':'disabled'} style="width:100%">
+          ${charPickKey?'선택 확정 → 모험 시작':'캐릭터를 선택하세요'}
+        </button>
+      </div>
+    </div>`;
+}
+function confirmCharacter(){
+  if(!charPickKey) return;
+  G.character = charPickKey;
+  charPickKey = null;
+  G.deck = buildStarterDeck();
+  // 🗺️ 1스테이지 분기 노드 선택 화면으로
+  G.screen = 'map_select';
+  G.pendingNextOptions = MAP_START_NODES;
+  render();
 }
 
   
@@ -1105,11 +2791,11 @@ function renderBattle(){
   const allEnemyCards = [...G.enemyDrawPile, ...G.enemyDiscardPile];
   const enemyPips = allEnemyCards.map(c => {
     const isRemaining = eDrawIds.has(c.id);
-    const shd = TIER[c.tier].shield;
+    const shd = cardShield(c);
     return `<div class="pip ${c.type} tier-${c.tier} ${isRemaining ? '' : 'enemy-drawn'}">
       <div class="pip-icon">${CARD_TYPES[c.type].icon}</div>
       <div class="pip-label">${c.type.slice(0,3).toUpperCase()}</div>
-      <div class="pip-dmg">${TIER[c.tier].dmg}</div>
+      <div class="pip-dmg">${cardDmg(c)}</div>
       ${shd>0?`<div class="pip-shield">🛡${shd}</div>`:''}
     </div>`;
   }).join('');
@@ -1130,12 +2816,12 @@ function renderBattle(){
     handHTML = G.hand.map((c, i) => {
       const used = G.usedInHand.includes(i);
       const ct   = CARD_TYPES[c.type];
-      const shd  = TIER[c.tier].shield;
+      const shd  = cardShield(c);
       return `<div class="card ${c.type} tier-${c.tier} ${used ? 'used-card' : ''}"
                    onclick="playCard(${i})" style="cursor:${used ? 'default' : 'pointer'}">
         <div class="card-icon">${ct.icon}</div>
         <div class="card-name">${ct.label}</div>
-        <div class="card-dmg">${TIER[c.tier].dmg} DMG</div>
+        <div class="card-dmg">${cardDmg(c)} DMG</div>
         ${shd > 0 ? `<div class="card-shield">🛡${shd}</div>` : ''}
       </div>`;
     }).join('');
@@ -1155,16 +2841,28 @@ function renderBattle(){
 
     <div class="panel">
       <div id="hp-area">
-        <div class="hp-block">
-          <div class="hp-label"><span>⚔️ PLAYER HP</span><span>${G.playerHp} / ${G.playerMaxHp}</span></div>
+        <!-- 💡 ID 추가 및 피통 25% 이하시 hp-danger 클래스 추가 -->
+        <div class="hp-block ${pPct <= 25 ? 'hp-danger' : ''}" id="player-hp-block">
+          <div class="hp-label">
+            <span>${G.character ? `${(CHARACTERS.find(c=>c.key===G.character)||{}).icon||'⚔️'} PLAYER (${(CHARACTERS.find(c=>c.key===G.character)||{}).name||'?'})` : '⚔️ PLAYER HP'}</span>
+            <span>${G.playerHp} / ${G.playerMaxHp}</span>
+          </div>
           <div class="hp-track"><div class="hp-fill" id="player-hp-fill" style="width:${pPct}%"></div></div>
         </div>
-        <div class="hp-block">
+        <div class="hp-block ${ePct <= 25 ? 'hp-danger' : ''}" id="enemy-hp-block">
           <div class="enemy-bg-sprite" style="background-image: url('${bossData.img}')"></div>
-          <div class="hp-label"><span>${stage.enemyIcon} ENEMY HP</span><span>${G.enemyHp} / ${G.enemyMaxHp}</span></div>
+          <div class="hp-label"><span>${stage.enemyIcon} ENEMY (${stage.enemyName})</span><span>${G.enemyHp} / ${G.enemyMaxHp}</span></div>
           <div class="hp-track"><div class="hp-fill" id="enemy-hp-fill" style="width:${ePct}%"></div></div>
         </div>
       </div>
+      ${(() => {
+        const ch = CHARACTERS.find(c => c.key === G.character);
+        if(!ch || !ch.passiveLabel) return '';
+        return `<div class="player-passive-bar">
+          <span class="ppb-label">${ch.passiveLabel}</span>
+          <span class="ppb-desc">${ch.passiveDesc}</span>
+        </div>`;
+      })()}
     </div>
 
     <div class="panel">
@@ -1235,7 +2933,7 @@ function handleDrawBtn(){
       div.innerHTML=`
         <div class="card-icon">${ct.icon}</div>
         <div class="card-name">${ct.label}</div>
-        <div class="card-dmg">${TIER[c.tier].dmg} DMG</div>`;
+        <div class="card-dmg">${cardDmg(c)} DMG</div>`;
       div.onclick=()=>playCard(i);
 
       const slots=handArea.querySelectorAll('.card-placeholder');
@@ -1260,15 +2958,17 @@ function renderReward(){
   const allMax=G.deck.every(c=>c.tier==='gold');
   const cards=G.deck.map((c,i)=>{
     const ct=CARD_TYPES[c.type];
-    const isMax=c.tier==='gold';
+    const isVariant = c.tier === 'variant';
+    const isMax = c.tier === 'gold' || isVariant;  // 변종도 강화 불가
     const sel=rewardPickIdx===i;
     const nt=c.tier==='normal'?'silver':'gold';
-    return `<div class="upg-card ${sel?'selected':''} ${isMax?'locked':''}"
+    const lockedLabel = isVariant ? '🌈 강화 불가' : 'MAX';
+    return `<div class="upg-card ${sel?'selected':''} ${isMax?'locked':''} ${isVariant?'variant-card':''}"
                  onclick="${isMax?'':'rewardPickIdx='+i+'; renderReward()'}">
       <div class="uc-icon">${ct.icon}</div>
-      <div class="uc-name">${ct.label}</div>
-      <div class="uc-dmg" style="color:${isMax?'var(--gold)':'var(--normal-c)'}">
-        ${isMax?'MAX':`${TIER[c.tier].dmg}<span style='color:${TIER[nt].color}'>→${TIER[nt].dmg}DMG</span> <span style='color:var(--shield);font-size:.7rem'>🛡${TIER[c.tier].shield}→${TIER[nt].shield}</span>`}
+      <div class="uc-name">${isVariant?'변종':ct.label}</div>
+      <div class="uc-dmg" style="color:${isVariant?'#ff7eb8':isMax?'var(--gold)':'var(--normal-c)'}">
+        ${isMax?lockedLabel:`${cardDmg(c)}<span style='color:${TIER[nt].color}'>→${TIER[nt].dmg}DMG</span> <span style='color:var(--shield);font-size:.7rem'>🛡${cardShield(c)}→${TIER[nt].shield}</span>`}
       </div>
     </div>`;
   }).join('');
@@ -1303,7 +3003,8 @@ function confirmReward(){
     SFX.upgrade();
     rewardPickIdx=null;
   }
-  G.screen='reststop'; render();
+  // 🗺️ 전투 클리어 후 노드 next로 진행
+  proceedFromCurrentNode();
 }
 
 /* ④ REST STOP */
@@ -1316,15 +3017,18 @@ function renderRestStop(){
     <div style="font-size:.62rem;color:var(--shield);margin-bottom:6px;text-align:center">강화 효과: 공격력 +2, 실드 +2 증가</div>
     <div class="upgrade-pick">
       ${G.deck.map((c,i)=>{
-        const isMax=c.tier==='gold', sel=restUpgradeIdx===i;
+        const isVariant = c.tier === 'variant';
+        const isMax = c.tier === 'gold' || isVariant;
+        const sel=restUpgradeIdx===i;
         const nt=c.tier==='normal'?'silver':'gold';
         const ct=CARD_TYPES[c.type];
-        return `<div class="upg-card ${sel?'selected':''} ${isMax?'locked':''}"
+        const lockedLabel = isVariant ? '🌈 강화 불가' : 'MAX';
+        return `<div class="upg-card ${sel?'selected':''} ${isMax?'locked':''} ${isVariant?'variant-card':''}"
                      onclick="${isMax?'':'restUpgradeIdx='+i+'; renderRestStop()'}">
           <div class="uc-icon">${ct.icon}</div>
-          <div class="uc-name">${ct.label}</div>
-          <div class="uc-dmg" style="color:${isMax?'var(--gold)':'var(--normal-c)'}">
-            ${isMax?'MAX':`${TIER[c.tier].dmg}<span style='color:${TIER[nt].color}'>→${TIER[nt].dmg}DMG</span>`}
+          <div class="uc-name">${isVariant?'변종':ct.label}</div>
+          <div class="uc-dmg" style="color:${isVariant?'#ff7eb8':isMax?'var(--gold)':'var(--normal-c)'}">
+            ${isMax?lockedLabel:`${cardDmg(c)}<span style='color:${TIER[nt].color}'>→${TIER[nt].dmg}DMG</span>`}
           </div>
         </div>`;
       }).join('')}
@@ -1370,11 +3074,342 @@ function confirmRestStop(){
     SFX.upgrade();
   }
   restChoice=null; restUpgradeIdx=null;
-  initStage(G.stageIdx+1,G.playerHp);
-  BGM.playBattle();
-  G.screen='boss_intro'; render();
+  // 🗺️ 노드 기반 진행
+  proceedFromCurrentNode();
 }
 
+/* 현재 노드의 next 처리: 1개면 자동 진입, 여러개면 분기 화면 */
+function proceedFromCurrentNode(){
+  const cur = MAP_NODES[G.currentNodeId];
+  if(!cur || !cur.next || cur.next.length === 0){
+    // 다음 노드 없음 = 게임 클리어 (보스는 별도 처리)
+    return;
+  }
+  if(cur.next.length === 1){
+    enterNode(cur.next[0]);
+  } else {
+    G.pendingNextOptions = cur.next;
+    G.screen = 'map_select';
+    render();
+  }
+}
+
+/* 다음 스테이지로 진입 (노드 기반) — 기존 호출부 호환 유지 */
+function proceedToNextStage(){
+  proceedFromCurrentNode();
+}
+
+/* 🌙 뒷거래 — 거래상 인트로 / 카드 선택 / 덱 교체 (대격변 v6.0) */
+function renderDeal(){
+  if(G.dealStep === 'intro')   return renderDealIntro();
+  if(G.dealStep === 'pick')    return renderDealPick();
+  if(G.dealStep === 'replace') return renderDealReplace();
+  if(G.dealStep === 'reject')  return renderDealReject();
+}
+
+function renderDealIntro(){
+  // 💡 수정: 거래 비용이 2가 되었으므로, HP가 2 이하일 때 위험 경고를 띄웁니다.
+  const lowHp = G.playerHp <= 2;
+  const warn = lowHp
+    ? `<div style="color:var(--danger);font-size:.72rem;margin-top:8px;font-weight:700">※ HP가 위험합니다! (사망 주의)</div>`
+    : '';
+  // 💗 현재 HP 표시 (거래 응할지 결정에 도움)
+  const hpDisplay = `
+    <div style="display:flex;justify-content:center;align-items:center;gap:8px;margin:10px 0;padding:8px 14px;background:var(--bg2);border-radius:8px;border:1px solid var(--border);max-width:200px;margin-left:auto;margin-right:auto">
+      <span style="font-size:.7rem;color:var(--text-dim)">나의 HP</span>
+      <span style="font-family:'Rajdhani',sans-serif;font-size:1.1rem;font-weight:700;color:${G.playerHp <= 3 ? 'var(--danger)' : G.playerHp <= 6 ? 'var(--accent)' : 'var(--win)'}">
+        ${G.playerHp} / ${G.playerMaxHp}
+      </span>
+    </div>`;
+  $('app').innerHTML = `
+    ${titleBarHTML('🚶 길 위에서')}
+    <div class="panel deal-panel" style="text-align:center;padding:24px 20px">
+      <div style="font-size:.7rem;color:var(--text-dim);letter-spacing:3px;margin-bottom:10px">
+        터벅... 터벅...
+      </div>
+      <div class="dealer-img-frame" style="background-image:url('dealer.jpg')"></div>
+      <div style="font-family:'Black Han Sans',sans-serif;font-size:1.1rem;color:var(--accent);margin:14px 0 6px">
+        수상한 거래상
+      </div>
+      <div class="boss-dialogue" style="margin-bottom:6px">
+        "쉿... 좋은 카드가 있는데, 한번 보겠소?<br>
+        <span style="font-size:.78rem;color:var(--danger)">단, 보려면 HP -2 이오.</span>"
+      </div>
+      ${hpDisplay}
+      ${warn}
+      <div class="modal-actions" style="margin-top:14px;display:flex;gap:10px;flex-direction:column">
+        <button class="btn btn-primary" onclick="acceptDeal()">거래에 응한다 (HP -2)</button>
+        <button class="btn btn-draw" onclick="rejectDeal()">거절한다</button>
+      </div>
+    </div>`;
+}
+
+function acceptDeal(){
+  // 💡 수정: 실제로 플레이어의 HP를 2만큼 차감합니다.
+  G.playerHp = Math.max(0, G.playerHp - 2);
+  SFX.hpLoss();
+  // HP가 0이 되면 게임오버 처리
+  if(G.playerHp <= 0){
+    G.isGameOver = true;
+    G.screen = 'gameover';
+    render();
+    return;
+  }
+  G.dealCards = generateDealCards(3);
+  G.dealPickIdx = null;
+  G.dealRevealed = [false, false, false];  // 🎴 모두 뒷면으로 초기화
+  G.dealStep = 'pick';
+  render();
+}
+
+function rejectDeal(){
+  G.dealStep = 'reject';
+  render();
+}
+
+function renderDealReject(){
+  $('app').innerHTML = `
+    ${titleBarHTML('🚶 길 위에서')}
+    <div class="panel deal-panel" style="text-align:center;padding:30px 20px">
+      <div class="dealer-img-frame" style="background-image:url('dealer.jpg');opacity:.5"></div>
+      <div class="boss-dialogue" style="margin:18px 0">
+        "아쉽군... 또 보세."
+      </div>
+      <button class="btn btn-primary" onclick="proceedToNextStage()" style="margin-top:8px">계속 가던 길을 간다 →</button>
+    </div>`;
+}
+
+function renderDealPick(){
+  // 🎭 카드 공개 상태: G.dealRevealed (배열, true/false) 
+  if(!G.dealRevealed) G.dealRevealed = [false, false, false];
+  // 🎭 마지막으로 공개된 카드 인덱스 — 그것만 애니메이션
+  if(typeof G.dealJustRevealedIdx === 'undefined') G.dealJustRevealedIdx = -1;
+  
+  const pips = G.dealCards.map((c, i) => {
+    const ct = CARD_TYPES[c.type];
+    const shd = cardShield(c);
+    const sel = G.dealPickIdx === i;
+    const revealed = G.dealRevealed[i];
+    const isVariant = c.tier === 'variant';
+    
+    if(!revealed){
+      return `<div class="deal-card-option deal-card-back">
+        <div class="dco-back-icon">🎴</div>
+        <div class="dco-back-text">???</div>
+      </div>`;
+    }
+    // 마지막에 공개된 카드만 flip 애니메이션
+    const flipClass = (i === G.dealJustRevealedIdx) ? 'deal-card-just-revealed' : '';
+    const variantClass = isVariant ? 'deal-card-variant' : '';
+    const tierLabel = isVariant ? '변종' : TIER[c.tier].label;
+    const tierColor = isVariant ? '#ff7eb8' : TIER[c.tier].color;
+    const variantBadge = isVariant 
+      ? `<div style="position:absolute;top:4px;right:4px;font-size:.55rem;background:linear-gradient(45deg,#ff5e5e,#ffae5e,#fff85e,#5eff7e,#5edcff,#bf5eff);color:#fff;padding:2px 5px;border-radius:4px;font-weight:700;letter-spacing:.5px">VARIANT</div>` 
+      : '';
+    return `<div class="deal-card-option deal-card-revealed ${flipClass} ${variantClass} ${sel?'selected':''}" onclick="onDealCardClick(${i})" style="position:relative">
+      ${variantBadge}
+      <div class="dco-icon">${ct.icon}</div>
+      <div class="dco-name" style="color:${tierColor}">${tierLabel} ${ct.name}</div>
+      <div class="dco-stats">DMG ${cardDmg(c)}${shd>0?` 🛡${shd}`:''}</div>
+      ${isVariant ? `<div style="font-size:.55rem;color:var(--text-dim);margin-top:2px">⚠️ 강화 불가</div>` : ''}
+    </div>`;
+  }).join('');
+  
+  // 🎴 내 덱 표시 (항상 하단에 노출)
+  const myDeckPips = G.deck.map(c => {
+    const ct = CARD_TYPES[c.type];
+    const shd = cardShield(c);
+    const isVariant = c.tier === 'variant';
+    return `<div class="pip ${c.type} tier-${c.tier} ${isVariant?'pip-variant':''}" style="cursor:default;position:relative">
+      <div class="pip-icon">${ct.icon}</div>
+      <div class="pip-label">${c.type.slice(0,3).toUpperCase()}</div>
+      <div class="pip-dmg">${cardDmg(c)}</div>
+      ${shd>0?`<div class="pip-shield">🛡${shd}</div>`:''}
+    </div>`;
+  }).join('');
+  
+  const allRevealed = G.dealRevealed.every(r => r);
+  const canConfirm = allRevealed && G.dealPickIdx !== null;
+  const remaining = G.dealRevealed.filter(r=>!r).length;
+  
+  // 변종 카드 안내 (어떤 변종이 있는지 클릭 시 자세히)
+  const hasVariant = allRevealed && G.dealCards.some(c => c.tier === 'variant');
+  const variantHint = hasVariant 
+    ? `<div style="text-align:center;font-size:.7rem;color:#ff7eb8;margin-top:8px;line-height:1.5">🌈 변종 카드는 강화 불가지만 특수 능력치를 가집니다 (클릭하여 자세히 보기)</div>`
+    : '';
+  
+  $('app').innerHTML = `
+    ${titleBarHTML('🃏 카드 공개')}
+    <div class="panel" style="padding:18px 14px">
+      <div style="text-align:center;font-size:.78rem;color:var(--text-dim);margin-bottom:12px;line-height:1.6">
+        ${allRevealed 
+          ? `"셋 중 하나만 가져갈 수 있소.<br>잘 골라보시오..."` 
+          : `"잘 보시오..."<br><span style="font-size:.7rem">공개 중... (${3-remaining}/3)</span>`}
+      </div>
+      <div class="deal-card-grid">${pips}</div>
+      ${variantHint}
+      
+      <div class="modal-actions" style="margin-top:14px">
+        <button class="btn btn-primary" onclick="confirmDealPick()" ${canConfirm?'':'disabled'} style="width:100%">
+          ${!allRevealed ? '카드를 공개하는 중...' : (canConfirm?'이 카드로 결정 →':'카드를 선택하세요')}
+        </button>
+      </div>
+      
+      <div style="margin-top:18px;padding-top:14px;border-top:1px dashed var(--border)">
+        <div style="text-align:center;font-size:.7rem;color:var(--text-dim);letter-spacing:2px;margin-bottom:8px">
+          나의 현재 덱 (${G.deck.length}장)
+        </div>
+        <div class="pip-row" style="justify-content:center;gap:5px">${myDeckPips}</div>
+      </div>
+    </div>`;
+  
+  // 🎭 드라마틱 자동 공개: 1초 간격으로 한 장씩
+  if(!allRevealed){
+    setTimeout(() => {
+      const idx = G.dealRevealed.findIndex(r => !r);
+      if(idx !== -1 && G.screen === 'deal' && G.dealStep === 'pick'){
+        G.dealRevealed[idx] = true;
+        G.dealJustRevealedIdx = idx;  // 새로 공개된 인덱스 기록
+        SFX.draw && SFX.draw();
+        render();
+      }
+    }, 1000);
+  } else {
+    // 모두 공개됐으면 애니메이션 인덱스 리셋
+    G.dealJustRevealedIdx = -1;
+  }
+}
+
+/* 카드 클릭: 변종이면 자세히 알림, 일반이면 선택 */
+function onDealCardClick(i){
+  const c = G.dealCards[i];
+  if(c && c.tier === 'variant'){
+    // 변종이면 정보 알림 (선택은 별도)
+    showVariantInfo(i);
+  } else {
+    G.dealPickIdx = i;
+    render();
+  }
+}
+
+/* 변종 카드 상세 정보 팝업 */
+function showVariantInfo(i){
+  const c = G.dealCards[i];
+  if(!c) return;
+  const ct = CARD_TYPES[c.type];
+  
+  // 💡 수정 포인트: TIER 데이터를 읽지 않고, cardDmg(c)와 cardShield(c) 함수를 직접 호출하여 실제 수치를 가져옵니다.
+  const actualDmg = cardDmg(c);
+  const actualShield = cardShield(c);
+
+  const desc = ({
+    scissors: '예리하지만 방어 불가 — 한 방의 폭딜!',
+    rock:     '바위처럼 단단한 방어 — 패배 시에도 안전',
+    paper:    '균형형 — 공격과 방어의 조화'
+  })[c.type] || '';
+  
+  let modal = document.getElementById('variant-info-modal');
+  if(!modal){
+    modal = document.createElement('div');
+    modal.id = 'variant-info-modal';
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML = `
+    <div class="enemy-detail-bg" onclick="closeVariantInfo(${i})"></div>
+    <div class="enemy-detail-panel" style="border-color:#ff7eb8;max-width:320px">
+      <div class="enemy-detail-head" style="background:rgba(255,126,184,.08)">
+        <span style="font-family:'Black Han Sans',sans-serif;background:linear-gradient(45deg,#ff5e5e,#ffae5e,#fff85e,#5eff7e,#5edcff,#bf5eff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:1px">🌈 VARIANT 카드</span>
+        <button class="map-modal-close" onclick="closeVariantInfo(${i})">✕</button>
+      </div>
+      <div class="enemy-detail-body" style="text-align:center">
+        <div style="font-size:3rem;margin:8px 0">${ct.icon}</div>
+        <div style="font-family:'Black Han Sans',sans-serif;font-size:1.1rem;color:var(--text);margin-bottom:6px">변종 ${ct.name}</div>
+        <div style="display:flex;justify-content:center;gap:14px;margin:10px 0;font-family:'Rajdhani',sans-serif">
+          <div><div style="font-size:.65rem;color:var(--text-dim)">공격력</div><div style="font-size:1.4rem;font-weight:700;color:var(--accent)">${actualDmg}</div></div>
+          <div><div style="font-size:.65rem;color:var(--text-dim)">실드</div><div style="font-size:1.4rem;font-weight:700;color:var(--silver)">${actualShield}</div></div>
+        </div>
+        <div style="font-size:.78rem;color:var(--text-dim);line-height:1.6;margin:12px 0">${desc}</div>
+        <div style="font-size:.7rem;color:var(--danger);background:rgba(240,74,106,.08);padding:8px;border-radius:6px;line-height:1.5">
+          ⚠️ 강화 불가 (실버/골드로 업그레이드 안 됨)
+        </div>
+        <button class="btn btn-primary" style="width:100%;margin-top:14px" onclick="selectVariantCard(${i})">이 카드 선택</button>
+      </div>
+    </div>`;
+  modal.style.display = 'flex';
+}
+
+function closeVariantInfo(){
+  const m = document.getElementById('variant-info-modal');
+  if(m) m.remove();
+}
+
+function selectVariantCard(i){
+  G.dealPickIdx = i;
+  closeVariantInfo();
+  render();
+}
+
+function confirmDealPick(){
+  if(G.dealPickIdx === null) return;
+  G.dealReplaceIdx = null;
+  G.dealStep = 'replace';
+  render();
+}
+
+function renderDealReplace(){
+  const picked = G.dealCards[G.dealPickIdx];
+  const pickedCt = CARD_TYPES[picked.type];
+  const pickedShd = cardShield(picked);
+
+  const deckPips = G.deck.map((c, i) => {
+    const ct = CARD_TYPES[c.type];
+    const shd = cardShield(c);
+    const sel = G.dealReplaceIdx === i;
+    return `<div class="deal-deck-card ${sel?'selected':''} pip ${c.type} tier-${c.tier}" onclick="G.dealReplaceIdx=${i}; render();">
+      <div class="pip-icon">${ct.icon}</div>
+      <div class="pip-label">${c.type.slice(0,3).toUpperCase()}</div>
+      <div class="pip-dmg">${cardDmg(c)}</div>
+      ${shd>0?`<div class="pip-shield">🛡${shd}</div>`:''}
+    </div>`;
+  }).join('');
+
+  const canConfirm = G.dealReplaceIdx !== null;
+  $('app').innerHTML = `
+    ${titleBarHTML('🔄 덱 교체')}
+    <div class="panel" style="padding:20px 16px">
+      <div style="text-align:center;margin-bottom:14px">
+        <div style="font-size:.7rem;color:var(--text-dim);letter-spacing:2px;margin-bottom:8px">새 카드</div>
+        <div class="deal-card-option selected" style="display:inline-block;cursor:default">
+          <div class="dco-icon">${pickedCt.icon}</div>
+          <div class="dco-name" style="color:${TIER[picked.tier].color}">${TIER[picked.tier].label} ${pickedCt.name}</div>
+          <div class="dco-stats">DMG ${cardDmg(picked)}${pickedShd>0?` 🛡${pickedShd}`:''}</div>
+        </div>
+      </div>
+      <div style="text-align:center;font-size:.78rem;color:var(--text-dim);margin:14px 0 10px;line-height:1.6">
+        ↓ 어떤 카드와 바꾸시겠소? ↓
+      </div>
+      <div class="pip-row" style="justify-content:center">${deckPips}</div>
+      <div class="modal-actions" style="margin-top:18px">
+        <button class="btn btn-primary" onclick="confirmDealReplace()" ${canConfirm?'':'disabled'} style="width:100%">
+          ${canConfirm?'교체 확정 → 다음 스테이지':'교체할 카드를 선택하세요'}
+        </button>
+      </div>
+    </div>`;
+}
+
+function confirmDealReplace(){
+  if(G.dealReplaceIdx === null) return;
+  G.deck[G.dealReplaceIdx] = G.dealCards[G.dealPickIdx];
+  SFX.upgrade();
+  G.dealCards = [];
+  G.dealPickIdx = null;
+  G.dealReplaceIdx = null;
+  G.dealRevealed = [false, false, false];
+  G.dealStep = 'intro';
+  proceedFromCurrentNode();
+}
+
+/* ⑤ GAME OVER */
 /* ⑤ GAME OVER */
 function renderGameOver(){
   BGM.playGameOver();
@@ -1389,39 +3424,241 @@ function renderGameOver(){
      <button class="btn btn-primary" onclick="location.reload()">🏠 처음 화면으로</button>
     </div>`;
 }
-
-/* ⑥ VICTORY */
-function renderVictory(){
-  BGM.playVictory();
-  $('app').innerHTML = `
-    <div class="panel" style="text-align:center;padding:36px 20px">
-      <div style="font-size:3rem;margin-bottom:12px">🏆</div>
-      <div style="font-family:'Black Han Sans',sans-serif;color:var(--accent);font-size:1.5rem;margin-bottom:8px">ALL CLEAR!</div>
-      <div style="font-size:.8rem;color:var(--text-dim);line-height:1.8;margin-bottom:20px">
-        문동진 격파!<br>모든 스테이지를 클리어했습니다 🎉
-      </div>
-      <button class="btn btn-primary" onclick="startGame()">🔄 다시 플레이</button>
-    </div>`;
-} // 깔끔하게 중괄호로 닫아주세요.
-</script>
+</script> <!-- 💡 같이 삭제되었던 방파제를 복구했습니다!!! -->
 
 <!-- ════════════════════════════════════════
      ❻  FLOW
      ════════════════════════════════════════ -->
 <script>
-function startGame(){
-  BGM.play();
-  G.isGameOver = false;
-  G.deck = buildStarterDeck();
-  rewardPickIdx = null; 
-  restChoice = null; 
-  restUpgradeIdx = null;
-  G.log = [];
-  initStage(0, null);
-  G.screen = 'boss_intro';
-  render();
+
+/* ⑥ VICTORY (새로운 시네마틱 엔딩 연출) */
+function renderEndingCinematic(){
+  BGM.playEnding(); // 💡 장엄한 엔딩 음악 플레이
+  
+  // 플레이어 이름 가져오기 (없으면 '플레이어'로 대체)
+  const charObj = CHARACTERS.find(c => c.key === G.character) || {};
+  const charName = charObj.name || '플레이어';
+
+  // 검은 화면 전체 덮기 (기존 UI 은폐)
+  $('app').innerHTML = `
+    <div style="position:fixed; inset:0; background:#000; z-index:15000; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+      
+      <!-- 장면 1 -->
+      <div id="end-scene-1" class="ending-text">
+        가위, 바위, 보...<br>
+        <span style="font-size:0.85rem; color:var(--text-dim); font-weight:400;">이토록 단순한 섭리로 세상을 지배하려던 자들은<br>마침내 무릎을 꿇었다.</span>
+      </div>
+
+      <!-- 장면 2 -->
+      <div id="end-scene-2" class="ending-text">
+        <span style="color:var(--accent); font-size:1.3rem;">${charName}</span><span style="font-weight:400;">의 손끝에서 시작된 작은 파문이</span><br>
+        <span style="font-size:0.85rem; color:var(--text-dim); font-weight:400;">논리가 사라질 뻔한 세상의 균형을 되찾았으니.</span>
+      </div>
+
+      <!-- 장면 3 (크레딧) -->
+      <div id="end-scene-3" class="ending-text" style="line-height:2.5;">
+        <span style="color:#00f3ff; font-family:'Orbitron', sans-serif; font-size:2rem; letter-spacing:6px; text-shadow:0 0 10px rgba(0,243,255,0.5);">THANK YOU FOR PLAYING</span><br>
+        <span style="font-size:0.75rem; color:var(--text-dim); letter-spacing:3px;">Developed by Karona</span><br><br>
+        <button class="btn btn-draw" style="margin-top:30px; opacity:0; transition:opacity 2s;" id="btn-return" onclick="location.reload()">메인으로 돌아가기</button>
+      </div>
+
+    </div>
+  `;
+
+  // 💡 페이드 인/아웃 타이밍 시퀀스
+  setTimeout(() => { document.getElementById('end-scene-1').classList.add('show'); }, 1000); // 1초 후 1장 등장
+  setTimeout(() => { document.getElementById('end-scene-1').classList.remove('show'); }, 6000); // 6초 후 1장 퇴장
+  
+  setTimeout(() => { document.getElementById('end-scene-2').classList.add('show'); }, 8000); // 8초 후 2장 등장
+  setTimeout(() => { document.getElementById('end-scene-2').classList.remove('show'); }, 13000); // 13초 후 2장 퇴장
+  
+  setTimeout(() => { 
+    document.getElementById('end-scene-3').classList.add('show'); // 15초 후 크레딧 등장
+    setTimeout(() => { document.getElementById('btn-return').style.opacity = '1'; }, 3000); // 크레딧 후 버튼 등장
+  }, 15000);
 }
+
+// 💡 게임 시작 시 글리치 트랜지션 연출 적용
+// 💡 게임 시작 시 글리치 트랜지션 연출 적용
+function startGame(){
+  const appContainer = $('app');
+  appContainer.classList.add('glitch-transition'); // 화면 깨짐 애니메이션 켜기
+  
+  // 글리치가 중간쯤 진행됐을 때(0.2초 후) 화면 데이터 변경
+  setTimeout(() => {
+    // BGM.play() 삭제: 지도 화면에서는 브금을 틀지 않는 게 맞습니다.
+    G.isGameOver = false;
+    G.character = null;
+    charPickKey = null;
+    rewardPickIdx = null; 
+    restChoice = null; 
+    restUpgradeIdx = null;
+    G.log = [];
+    G.currentNodeId = null;
+    G.visitedNodes = [];
+    G.seenEnemies = loadSeenEnemies();
+    G.enemyDetailNodeId = null;
+    G.mapModalOpen = false;
+    G.screen = 'map';   
+    render();
+    
+    // 애니메이션이 끝나면 클래스 제거하여 초기화
+    setTimeout(() => appContainer.classList.remove('glitch-transition'), 200);
+  }, 200);
+}
+
+
+
+/* 🗂️ sessionStorage 헬퍼 — 만난 적 정보 (브라우저 세션 한정 유지) */
+function saveSeenEnemies(){
+  try { sessionStorage.setItem('srp_seenEnemies', JSON.stringify(G.seenEnemies)); }
+  catch(e){ /* sessionStorage 차단 환경 무시 */ }
+}
+function loadSeenEnemies(){
+  try {
+    const raw = sessionStorage.getItem('srp_seenEnemies');
+    return raw ? JSON.parse(raw) : [];
+  } catch(e){ return []; }
+}
+
 window.onload=()=>render();
+</script> 
+
+<!-- ════════════════════════════════════════
+     🐛 DEBUG TOOLS (개발자용 - 플로팅 UI 업그레이드)
+     ════════════════════════════════════════ -->
+<script>
+window.DEBUG = {
+  goto(nodeId){
+    if(!MAP_NODES[nodeId]){ console.error('알 수 없는 노드:', nodeId); return; }
+    if(!G.character){ G.character = 'karona'; G.deck = buildStarterDeck(); }
+    G.isGameOver = false;
+    enterNode(nodeId);
+  },
+  skipTo(nodeId, charKey = 'karona'){
+    G.character = charKey;
+    G.deck = buildStarterDeck();
+    G.isGameOver = false;
+    G.visitedNodes = [];
+    G.seenEnemies = [];
+    G.currentNodeId = null;
+    enterNode(nodeId);
+  },
+  setHp(n){ G.playerHp = n; G.playerMaxHp = Math.max(G.playerMaxHp, n); if(G.screen!=='title') render(); },
+  setEnemyHp(n){ G.enemyHp = n; if(G.screen!=='title') render(); },
+  god(){ this.setHp(999); },
+  killEnemy(){
+    if(G.screen === 'battle' && G.enemyHp > 0) {
+      G.enemyHp = 0;
+      render();
+      setTimeout(triggerStageClear, 500);
+    } else {
+      alert('전투 중에만 사용할 수 있습니다.');
+    }
+  },
+  // 6장 제한을 지키기 위해 첫 번째 카드를 덮어쓰는 방식으로 수정!
+  addCard(type, tier = 'normal'){
+    if(!G.deck || G.deck.length === 0) G.deck = buildStarterDeck();
+    
+    // 💡 덱의 0번 인덱스(첫 번째 카드)를 해당 카드로 교환
+    const oldCard = G.deck[0];
+    G.deck[0] = makeCard(type, tier);
+    
+    if(G.screen !== 'title') render(); 
+    alert(`[DEBUG] 첫 번째 패였던 ${oldCard.type}(${oldCard.tier}) 카드가 ${type}(${tier}) 카드로 교체되었습니다.`);
+  }
+};
+
+// URL 파라미터 ?debug=true 면 글로벌 플로팅 패널 활성화
+if(new URLSearchParams(location.search).get('debug') === 'true'){
+  console.log('%c🐛 DEBUG MODE 활성화', 'color:#e8c84a;font-size:16px;font-weight:bold');
+  window.__DEBUG_MODE = true;
+
+  // 1. 플로팅 패널 스타일 동적 추가
+  const debugStyle = document.createElement('style');
+  debugStyle.innerHTML = `
+    #debug-floating-btn {
+      position: fixed; bottom: 20px; left: 20px; width: 48px; height: 48px;
+      border-radius: 50%; background: var(--danger); color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem; cursor: pointer; z-index: 10000;
+      box-shadow: 0 0 14px rgba(240,74,106,.6); border: 2px solid #fff;
+      transition: transform 0.2s;
+    }
+    #debug-floating-btn:hover { transform: scale(1.1); }
+    #debug-modal {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10001;
+      display: none; align-items: center; justify-content: center; backdrop-filter: blur(3px);
+    }
+    #debug-panel {
+      background: var(--bg2); border: 2px dashed var(--accent); border-radius: 12px;
+      padding: 18px; width: 90%; max-width: 380px; box-shadow: 0 0 30px rgba(232,200,74,.3);
+    }
+    .debug-btn { 
+      margin: 4px 2px; padding: 8px 10px; font-size: 0.72rem; 
+      background: #1c2040; color: #fff; border: 1px solid #4a5080; 
+      border-radius: 6px; cursor: pointer; transition: all 0.2s; font-family: 'Noto Sans KR', sans-serif; font-weight: 700;
+    }
+    .debug-btn:hover { background: #3a4070; border-color: var(--accent); color: var(--accent); }
+    .debug-group-title { color: var(--accent2); font-size: 0.8rem; margin: 12px 0 6px; font-weight: 800; letter-spacing: 1px; }
+  `;
+  document.head.appendChild(debugStyle);
+
+  // 2. 벌레 버튼 추가
+  const btn = document.createElement('div');
+  btn.id = 'debug-floating-btn';
+  btn.innerHTML = '🐛';
+  btn.title = '개발자 도구 열기';
+  btn.onclick = () => { document.getElementById('debug-modal').style.display = 'flex'; };
+  document.body.appendChild(btn);
+
+  // 3. 디버그 조작 모달 패널 추가
+  const modal = document.createElement('div');
+  modal.id = 'debug-modal';
+  modal.innerHTML = `
+    <div id="debug-panel">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #444; padding-bottom:10px; margin-bottom:10px;">
+        <b style="color:var(--accent); font-size:1.1rem; font-family:'Black Han Sans', sans-serif; letter-spacing: 1px;">🛠️ DEV MODE 커스터마이저</b>
+        <button onclick="document.getElementById('debug-modal').style.display='none'" style="background:none;border:none;color:#888;font-size:1.4rem;cursor:pointer;">✕</button>
+      </div>
+      
+      <div class="debug-group-title">🎴 덱 강제 조작 (테스트용 즉시 추가)</div>
+      <div>
+        <button class="debug-btn" onclick="DEBUG.addCard('scissors', 'variant')">🌈 변종 가위 추가</button>
+        <button class="debug-btn" onclick="DEBUG.addCard('rock', 'variant')">🌈 변종 바위 추가</button>
+        <button class="debug-btn" onclick="DEBUG.addCard('paper', 'variant')">🌈 변종 보 추가</button>
+      </div>
+      <div style="margin-top:4px;">
+        <button class="debug-btn" onclick="DEBUG.addCard('scissors', 'gold')">🥇 골드 가위</button>
+        <button class="debug-btn" onclick="DEBUG.addCard('rock', 'gold')">🥇 골드 바위</button>
+        <button class="debug-btn" onclick="DEBUG.addCard('paper', 'gold')">🥇 골드 보</button>
+      </div>
+
+      <div class="debug-group-title" style="color:var(--danger)">❤️ 전투 & 체력 개입</div>
+      <div>
+        <button class="debug-btn" onclick="DEBUG.god()">🛡️ 내 HP 999 (무적)</button>
+        <button class="debug-btn" onclick="DEBUG.setHp(1)">🩸 내 HP 1 (뒷거래 경고 테스트)</button>
+        <br>
+        <button class="debug-btn" onclick="DEBUG.setEnemyHp(1)">🔪 적 HP 1 만들기</button>
+        <button class="debug-btn" style="border-color:var(--danger); color:var(--danger);" onclick="DEBUG.killEnemy(); document.getElementById('debug-modal').style.display='none';">💀 현 스테이지 즉시 클리어</button>
+      </div>
+
+      <div class="debug-group-title" style="color:var(--silver)">🚀 강제 노드 이동 (선택 창 무시)</div>
+      <div>
+        <button class="debug-btn" onclick="DEBUG.skipTo('s4', G.character || 'karona'); document.getElementById('debug-modal').style.display='none';">🃏 사기꾼 (S4) 직행</button>
+        <button class="debug-btn" onclick="DEBUG.skipTo('deal_final', G.character || 'karona'); document.getElementById('debug-modal').style.display='none';">🌙 최종 뒷거래 직행</button>
+        <button class="debug-btn" onclick="DEBUG.skipTo('s5', G.character || 'karona'); document.getElementById('debug-modal').style.display='none';">👹 문동진 (S5) 직행</button>
+        <br>
+        <button class="debug-btn" style="width:100%; margin-top:6px;" onclick="renderEndingCinematic(); document.getElementById('debug-modal').style.display='none';">🏆 최종 엔딩 (시네마틱) 보기</button>
+      </div>
+      
+      <div style="font-size:0.7rem; color:#666; margin-top:14px; text-align:center;">
+        버튼을 누르면 뒤편의 게임 화면에 즉시 렌더링이 반영됩니다.
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
 </script>
 
 <div id="app"></div>
