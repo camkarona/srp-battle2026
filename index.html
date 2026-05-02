@@ -1487,6 +1487,7 @@ const CHARACTERS = [
   {
     key: 'quarrier',
     name: '대리암',
+    hidden: true,
     icon: '⛏️',
     img: 'quarrier.jpg',
     summary: '바위처럼 견디는 자',
@@ -2713,7 +2714,7 @@ function enterNode(nodeId){
 /* ④ CHARACTER SELECT — 대격변 v6.0: 캐릭터 선택 화면 */
 let charPickKey = null;
 function renderCharacterSelect(){
-  const cards = CHARACTERS.map(ch => {
+  const cards = CHARACTERS.filter(ch => !ch.hidden).map(ch => {
     const isSel = charPickKey === ch.key;
     // 🛡️ shuffle 안 하고 정적 previewDeck 사용 (깜빡임 방지)
     // 🛡️ 패시브 미리 반영 (대리암 바위 실드 +2 등)
